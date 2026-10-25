@@ -1,61 +1,84 @@
 # EPTC 2026: TIM optimisation
 
-Our team's entry for the EPTC 2026 thermal interface material (TIM) challenge. We look for the TIM-1 and TIM-2 designs that best balance chip temperature and TIM stress in a 65 × 65 mm, 400 W flip-chip package. The approach: Ansys runs, a surrogate model trained on them, and an optimiser that searches the surrogate.
+Our entry for the EPTC 2026 thermal interface material (TIM) challenge. We look for the TIM-1 and TIM-2 designs that best balance chip temperature and TIM stress in a 65 × 65 mm, 400 W flip-chip package.
 
-Report and slides are due **Sun 1 Nov 2026**. The plan and shared checklist: https://claude.ai/artifact/9zo1yB99V7NLvEt7zvfHVq
+## What the project does
 
-## What is in this repo
+A finite element model in Ansys takes about 4 minutes per TIM design, which is too slow to search thousands of designs directly. So we:
 
-| Folder | What goes there |
+1. Run a sampled set of designs through the coupled thermal and structural Ansys model.
+2. Train a Gaussian process surrogate on the results. It predicts temperature and stress in milliseconds.
+3. Search the surrogate with NSGA-II for the best trade-off between cooling (θJC) and TIM stress.
+4. Confirm the chosen designs in Ansys and map them to real TIM products.
+
+```
+Ansys model  →  sampled runs (CSV)  →  surrogate  →  Pareto front  →  confirmation runs
+  model/        automation/, data/        ml/            ml/            automation/
+```
+
+The model is validated against the junction-to-case resistance measured by Hu et al., "High Power Large Size HFCBGA Thermal Characterization", EPTC 2019.
+
+## Repository layout
+
+| Folder | Contents |
 |---|---|
-| `model/` | `eptc.wbpz`, the Ansys Workbench project archive. The one shared copy of the model |
-| `cad/` | `EPTC_package.SLDPRT`, the SolidWorks part (7 bodies). Edit here when the geometry changes, for example TIM thickness |
-| `automation/` | The Workbench batch script (`.wbjn`) and the Python runner that feeds it |
-| `data/inputs/` | `inputs.csv` files: one row per design to run |
-| `data/outputs/` | `outputs.csv` files that Ansys writes back, one row per design |
-| `ml/` | Surrogate model, optimisation and plots |
-| `materials/` | TIM property ranges and the table of real products |
-| `docs/` | Challenge Guide, organiser slides, reference paper (Hu et al., EPTC 2019) |
-| `report/` | Figures, report and slides |
+| `model/` | `eptc.wbpz`, the Ansys Workbench 2026 R1 project archive |
+| `cad/` | `EPTC_package.SLDPRT`, the SolidWorks part (7 bodies) |
+| `automation/` | `run_batch.py` and `batch.wbjn`, which run a CSV of designs through Workbench headless |
+| `data/inputs/` | Design sets, one row per design (see below) |
+| `data/outputs/` | Results written back by the runner, one row per design |
+| `ml/` | Sampling, surrogate, optimisation, sensitivity analysis and figures |
+| `materials/` | TIM property ranges and real product data |
+| `report/` | Report and slides |
 
-**Not stored here:** the unpacked Workbench project (`.wbpj` plus its `_files` folder) and solver scratch files. They are large, tied to one computer's paths and rebuilt from the archive, so `.gitignore` keeps them out.
+### Design sets
 
-## One-time setup
+| File | Rows | Purpose |
+|---|---|---|
+| `test_runs.csv` | 3 | Quick check of the pipeline (TIM-1 k = 2.5, 30 and 82 W/mK) |
+| `validation_runs.csv` | 21 | One run per real product pair, plus the TIMs from Hu et al. |
+| `lhs_runs.csv` | 175 | Latin hypercube sample: 150 to train the surrogate, 25 held out to test it |
+| `TIM_pair_simulation_runs.csv` | 1,530 | Full grid of real product pairs. Kept as a reference, not run in full |
 
-1. Install Git for Windows (https://git-scm.com). Git LFS comes with it.
-2. In a terminal, run `git lfs install` once.
-3. Clone the repo, then run `git lfs pull` to download the large files.
-4. For the Python parts: `python -m venv .venv`, activate it, then `pip install -r requirements.txt`.
+## Getting started
 
-## Editing the Ansys model
+Requirements: Windows, Ansys 2026 R1, Git with Git LFS, Python 3.12.
 
-Git can store and share the model and keep every version. It can't merge two people's edits to the same Workbench file. So **one person edits the model at a time**, and the lock makes that visible.
+```
+git lfs install
+git clone https://github.com/bitxHunt/eptc.git
+cd eptc
+git lfs pull
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-1. `git pull`
-2. `git lfs lock model/eptc.wbpz`. If someone else holds the lock, it says who. Wait, or ask them in the chat.
-3. In Workbench: **File > Restore Archive**, pick `model/eptc.wbpz`, and restore into `work/` inside the repo (ignored by Git) or any folder outside it.
-4. Make your change, solve, and check the results.
-5. **File > Archive**, save over `model/eptc.wbpz`. In the options, tick *Imported files external to project directory*. Untick *Result/solution files* unless others need your results, which keeps the archive small.
-6. `git add model/eptc.wbpz`, then `git commit -m "what you changed and why"`, then `git push`.
-7. `git lfs unlock model/eptc.wbpz`
-8. Post in the group chat what changed.
+Run a design set through Ansys (start with the 3-row test):
 
-To only look at or run the model, skip the lock: pull, restore, run.
+```
+python automation/run_batch.py data/inputs/test_runs.csv --dry-run
+python automation/run_batch.py data/inputs/test_runs.csv
+```
 
-## Running a batch of designs
+Results go to `data/outputs/test_runs_outputs.csv`. Running the same command again resumes where it stopped. Options and details: `automation/README.md`.
 
-Batches run on any laptop with Ansys 2026 R1 and the hackathon licence:
+Train the surrogate on the results and run the optimiser:
 
-1. Put the designs in `data/inputs/` as a CSV with the agreed columns (see the plan).
-2. Run the Python runner in `automation/`. It calls Workbench in the background (`RunWB2.exe -B -R <script>.wbjn`), which updates each design point and writes a CSV to `data/outputs/`.
-3. Commit the input and output CSVs together, so every result can be traced to its inputs.
+```
+cd ml
+python run_all.py ../data/inputs/lhs_runs.csv ../data/outputs/lhs_runs_outputs.csv
+```
 
-One design takes about 4 minutes on a 4-core laptop (from the solve log), so 150 designs is about 10 hours. Run big batches overnight.
+Figures and the Pareto front go to `ml/out/`. `python run_all.py --demo` runs the same pipeline on an analytical stand-in, without Ansys. Details: `ml/README.md`, and `data/inputs/README.md` for how the design sets were built.
 
-## Rules
+## Working on the model
 
-- Never commit the unpacked project (`.wbpj`, `_files`). Always archive to `model/eptc.wbpz`.
-- Lock before editing any file with `lockable` in `.gitattributes`, and unlock when done.
-- Pull before you start, push when you finish. Small, frequent commits with clear messages.
-- Everyone on Ansys 2026 R1. An archive saved in a newer version won't open in an older one.
-- Each push of the archive uses Git LFS storage on GitHub (about 77 MB with results), so check the account's LFS quota and archive without results where you can.
+Workbench files can't be merged, so the archive is locked while someone edits it:
+
+1. `git pull`, then `git lfs lock model/eptc.wbpz`.
+2. In Workbench, **File > Restore Archive** into `work/` (ignored by Git).
+3. Edit and solve, then **File > Archive** over `model/eptc.wbpz` with *Imported files external to project directory* ticked.
+4. Commit, push, then `git lfs unlock model/eptc.wbpz`.
+
+The unpacked project (`.wbpj`, `_files`) and solver scratch files are never committed.

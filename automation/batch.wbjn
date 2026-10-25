@@ -1,0 +1,128 @@
+# encoding: utf-8
+# 2026 R1
+# EPTC 2026 batch journal. Runs one chunk of designs through the Workbench project.
+#
+# Started by run_batch.py, not by hand:
+#   RunWB2.exe -B -R batch.wbjn     with the env var EPTC_JOB pointing to a job file
+#
+# The job file is plain "key=value" lines written by run_batch.py:
+#   archive=<path to eptc.wbpz>
+#   project=<path to the restored .wbpj in the work folder>
+#   inputs=<chunk input file, tab separated, header row first>
+#   outputs=<chunk output file, tab separated, appended one row per design>
+#
+# Approach: one design at a time on the current design point (DP 0). Set the
+# inputs, Update(), read the outputs, write a row, move on. A failed design is
+# written as status=failed and the loop carries on.
+#
+# Lines marked VERIFY are calls not yet checked against a journal recorded on
+# 2026 R1 (File > Scripting > Record Journal). Check those first.
+SetScriptVersion(Version="26.1.175")
+
+import os
+import time
+
+# Contract column -> (Workbench parameter, scale, unit). The value written to
+# Workbench is "<value * scale> [<unit>]". Contract units in the input file:
+#   k W/mK, E Pa, a 1/K (= 1/C), blt um, h W/m2K.
+# Explicit units in the expression make the project unit system irrelevant.
+# P1-P4 belong to material "TIM 1" and P5-P8 to "TIM 2" (from journal4.wbjn:
+# P1-P4 were created on the original TIM, which was renamed "TIM 1").
+INPUT_MAP = {
+    "E1": ("P1", 1.0, "Pa"),
+    "a1": ("P3", 1.0, "C^-1"),
+    "k1": ("P4", 1.0, "W m^-1 C^-1"),
+    "E2": ("P5", 1.0, "Pa"),
+    "a2": ("P7", 1.0, "C^-1"),
+    "k2": ("P8", 1.0, "W m^-1 C^-1"),
+    # Not parameters in the model yet. Fill in the P number once added in Workbench.
+    "blt1": (None, 1e-3, "mm"),   # DS_BLT1 from SolidWorks. VERIFY the unit Workbench shows for it
+    "blt2": (None, 1e-3, "mm"),   # DS_BLT2
+    "h": (None, 1.0, "W m^-2 C^-1"),  # heat sink film coefficient
+}
+
+# Poisson's ratio is fixed at 0.45. P2 and P6 are pinned to that value every
+# run until the P boxes are unticked in Engineering Data.
+FIXED = {"P2": "0.45", "P6": "0.45"}
+
+# Contract output column -> Workbench parameter. Values are written raw
+# ("629.25 [C]"); run_batch.py converts the units.
+# VERIFY: which body "scope 1" and "scope 2" are. Assumed TIM-1 and TIM-2.
+OUTPUT_MAP = [
+    ("Tj", "P10"),                 # Temperature scope Maximum. Must be scoped to the die only
+    ("Tmin", "P9"),                # Temperature scope Minimum
+    ("Tcase", None),               # lid-top maximum, not in the model yet
+    ("tim1_s1_max", "P12"),        # Maximum Principal Stress scope 1 Maximum
+    ("tim1_s1_min", "P11"),
+    ("tim2_s1_max", "P14"),        # Maximum Principal Stress scope 2 Maximum
+    ("tim2_s1_min", "P13"),
+    ("tim1_shear_max", "P16"),     # Shear Stress scope 1 Maximum
+    ("tim1_shear_min", "P15"),
+    ("tim2_shear_max", "P18"),     # Shear Stress scope 2 Maximum
+    ("tim2_shear_min", "P17"),
+    ("warpage", None),             # total deformation of the package, not in the model yet
+]
+
+
+def read_job():
+    path = os.environ.get("EPTC_JOB")
+    if not path:
+        from System import Environment  # VERIFY: os.environ is normally enough in IronPython
+        path = Environment.GetEnvironmentVariable("EPTC_JOB")
+    job = {}
+    for line in open(path):
+        line = line.strip()
+        if line and "=" in line:
+            key, value = line.split("=", 1)
+            job[key.strip()] = value.strip()
+    return job
+
+
+def read_rows(path):
+    lines = [l.rstrip("\r\n") for l in open(path) if l.strip()]
+    header = lines[0].split("\t")
+    return [dict(zip(header, l.split("\t"))) for l in lines[1:]]
+
+
+def clean(text):
+    return str(text).replace("\t", " ").replace("\r", " ").replace("\n", " ")[:400]
+
+
+def write_row(path, values):
+    f = open(path, "a")
+    f.write("\t".join([clean(v) for v in values]) + "\n")
+    f.close()
+
+
+job = read_job()
+if os.path.exists(job["project"]):
+    Open(FilePath=job["project"])  # VERIFY
+else:
+    Unarchive(ArchivePath=job["archive"], ProjectPath=job["project"], Overwrite=True)  # VERIFY
+
+designPoint = Parameters.GetDesignPoint(Name="0")
+out_cols = [name for name, pid in OUTPUT_MAP]
+if not os.path.exists(job["outputs"]):
+    write_row(job["outputs"], ["run_id", "status"] + out_cols + ["solve_time_s", "error_message"])
+
+for name, value in FIXED.items():
+    designPoint.SetParameterExpression(Parameter=Parameters.GetParameter(Name=name), Expression=value)
+
+for row in read_rows(job["inputs"]):
+    start = time.time()
+    try:
+        for col, (pid, scale, unit) in INPUT_MAP.items():
+            if pid is None or row.get(col, "") == "":
+                continue
+            expr = "%.9g [%s]" % (float(row[col]) * scale, unit)
+            designPoint.SetParameterExpression(Parameter=Parameters.GetParameter(Name=pid), Expression=expr)
+        Update()  # updates the current design point: thermal, then structural
+        values = []
+        for name, pid in OUTPUT_MAP:
+            if pid is None:
+                values.append("")
+            else:
+                values.append(designPoint.GetParameterValue(Parameters.GetParameter(Name=pid)))  # VERIFY: returns a Quantity, str() gives "629.25 [C]"
+        write_row(job["outputs"], [row["run_id"], "solved"] + values + ["%.1f" % (time.time() - start), ""])
+    except Exception as e:
+        write_row(job["outputs"], [row["run_id"], "failed"] + [""] * len(out_cols) + ["%.1f" % (time.time() - start), e])
