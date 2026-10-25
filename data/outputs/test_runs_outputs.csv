@@ -1,2 +1,0 @@
-run_id,status,Tj_C,Tmin_C,Tcase_C,tim1_s1_max_MPa,tim1_s1_min_MPa,tim2_s1_max_MPa,tim2_s1_min_MPa,tim1_shear_max_MPa,tim1_shear_min_MPa,tim2_shear_max_MPa,tim2_shear_min_MPa,warpage_mm,theta_jc_C_W,solve_time_s,chunk,finished_at,error_message
-P01-0009,failed,,,,,,,,,,,,,,29.6,1,2026-10-25T19:56:11,Update failed for the Model component in Steady-State Thermal.  Mechanical failed to open the database: The Mechanical editor does not have a valid license. Please refer the following directory for more information: C:\Users\LENOVO\AppData\Local\Temp\.ansys.
