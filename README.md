@@ -36,7 +36,8 @@ The model is validated against the junction-to-case resistance measured by Hu et
 | File | Rows | Purpose |
 |---|---|---|
 | `test_runs.csv` | 3 | Quick check of the pipeline (TIM-1 k = 2.5, 30 and 82 W/mK) |
-| `validation_runs.csv` | 21 | One run per real product pair, plus the TIMs from Hu et al. |
+| `validation_products.csv` | 16 | One run per real product pair |
+| `validation_hu2019.csv` | 5 | The five TIMs measured by Hu et al., for validation |
 | `lhs_runs.csv` | 175 | Latin hypercube sample: 150 to train the surrogate, 25 held out to test it |
 | `TIM_pair_simulation_runs.csv` | 1,530 | Full grid of real product pairs. Kept as a reference, not run in full |
 

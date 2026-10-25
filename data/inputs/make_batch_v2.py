@@ -1,4 +1,4 @@
-"""Build validation_runs.csv and lhs_runs.csv from TIM_pair_simulation_runs.csv.
+"""Build the validation and lhs_runs.csv design sets from TIM_pair_simulation_runs.csv.
 
 Both files keep the exact column layout of the original grid. The train / held-out
 split is carried in pair_id (LHS-TRAIN / LHS-HOLDOUT), so no column is added.
@@ -104,7 +104,11 @@ def lhs(n, seed, label, prefix):
 
 lhs_rows = lhs(N_TRAIN, SEED, "LHS-TRAIN", "LHS-T") + lhs(N_HOLD, SEED + 1, "LHS-HOLDOUT", "LHS-H")
 
-for name, data in [("validation_runs.csv", val), ("lhs_runs.csv", lhs_rows)]:
+products = [r for r in val if r["run_id"].startswith("VAL-P")]
+hu2019 = [r for r in val if r["run_id"].startswith("VAL-HU")]
+
+for name, data in [("validation_products.csv", products), ("validation_hu2019.csv", hu2019),
+                   ("lhs_runs.csv", lhs_rows)]:
     with open(HERE / name, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=cols, quoting=csv.QUOTE_NONNUMERIC)
         w.writeheader()

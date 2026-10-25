@@ -112,8 +112,11 @@ for row in read_rows(job["inputs"]):
     start = time.time()
     try:
         for col, (pid, scale, unit) in INPUT_MAP.items():
-            if pid is None or row.get(col, "") == "":
+            if pid is None:
                 continue
+            if row.get(col, "") == "":
+                # A skipped input would silently keep the previous design's value
+                raise ValueError("input %s is blank" % col)
             expr = "%.9g [%s]" % (float(row[col]) * scale, unit)
             designPoint.SetParameterExpression(Parameter=Parameters.GetParameter(Name=pid), Expression=expr)
         Update()  # updates the current design point: thermal, then structural
