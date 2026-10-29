@@ -25,7 +25,11 @@ pnpm build        # static site in dist/
 pnpm preview      # serve dist/
 ```
 
-URLs use a hash (`#/trade-off`), so the build works on any static host, including GitHub Pages, without rewrite rules.
+URLs use a hash (`#/trade-off`), so the build works on any static host without rewrite rules.
+
+## Deploy (Vercel)
+
+Import the GitHub repo on vercel.com and set **Root Directory** to `dashboard`. `vercel.json` sets the rest (pnpm install, `pnpm build`, output `dist`). Every push to `main` redeploys; pull requests get preview links.
 
 ## Data
 

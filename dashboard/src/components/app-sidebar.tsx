@@ -10,6 +10,7 @@ import {
   TableIcon,
 } from "lucide-react"
 
+import { ChipLogo } from "@/components/chip-logo"
 import {
   Sidebar,
   SidebarContent,
@@ -57,9 +58,8 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="px-3 py-3">
         <div className="flex items-center gap-2.5 overflow-hidden">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary text-sm font-semibold text-primary-foreground">
-            FB
-          </div>
+          <ChipLogo />
+
           <div className="grid min-w-0 leading-tight group-data-[collapsible=icon]:hidden">
             <span className="truncate text-sm font-semibold">TIM Explorer</span>
             <span className="truncate text-xs text-muted-foreground">Finite Boys · EPTC 2026</span>
@@ -71,7 +71,7 @@ export function AppSidebar() {
           <SidebarGroup key={section.group}>
             <SidebarGroupLabel>{section.group}</SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="gap-1">
                 {section.items.map((item) => (
                   <SidebarMenuItem key={item.to}>
                     <SidebarMenuButton

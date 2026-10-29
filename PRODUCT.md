@@ -8,7 +8,7 @@ web
 
 ## Stack
 
-React + Vite + TypeScript, shadcn/ui, TanStack Router, pnpm (user's choice). Lives in `dashboard/` of this repo. Data comes from the Python pipeline (`ml/`) as a JSON export. Delivered as a hosted link only (static build on GitHub Pages or Vercel); no offline single-file build.
+React + Vite + TypeScript, shadcn/ui, TanStack Router, pnpm (user's choice). Lives in `dashboard/` of this repo. Data comes from the Python pipeline (`ml/`) as a JSON export. Delivered as a hosted link only, a static build on Vercel; no offline single-file build.
 
 ## Users
 
