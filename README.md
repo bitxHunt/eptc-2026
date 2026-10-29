@@ -15,7 +15,7 @@ Our entry for the EPTC 2026 thermal interface material (TIM) challenge. We look 
 | What sets stress | TIM-1 modulus: nearly all of the variation in TIM-1 edge shear |
 | Key trade-off | Soft silver paste comes within about 15 % of indium's θJC with about 4,000 times less TIM-1 edge shear |
 
-Open [`dashboard/index.html`](dashboard/index.html) in any browser to explore the results. It works offline.
+Explore the results in the dashboard: https://bitxhunt.github.io/eptc/ (built from `dashboard/` on every push to `main`), or run it locally with `cd dashboard && pnpm install && pnpm dev`.
 
 ## How it works
 
@@ -24,10 +24,10 @@ One Ansys solve takes about 2.5 minutes, too slow to search the design space dir
 1. **Model.** A coupled steady-state thermal and static structural model in Ansys Workbench 2026 R1 (`model/eptc.wbpz`).
 2. **Batch.** `automation/run_batch.py` runs a CSV of designs through Workbench headless, in chunks, with resume and retry. Results land in `data/outputs/`.
 3. **Surrogate.** `ml/` fits one Gaussian process per output on the results, checks it on held-out runs, searches it with NSGA-II for the θJC against stress trade-off, and ranks the inputs with Sobol indices.
-4. **Dashboard.** `dashboard/` turns the results and the trained surrogate into one HTML page that predicts new designs in the browser.
+4. **Dashboard.** `dashboard/` is a React app (Vite, shadcn/ui, TanStack Router) that shows the results and runs the trained surrogate in the browser to predict new designs.
 
 ```
-model/eptc.wbpz       automation/          data/outputs/*.csv      ml/              dashboard/index.html
+model/eptc.wbpz       automation/          data/outputs/*.csv      ml/              dashboard/ (React)
 (Ansys project)  -->  (headless batch) --> (one row per design) --> (GP, NSGA-II, --> (explorer for judges
                                                                      Sobol)            and the team)
 ```
@@ -42,13 +42,13 @@ model/eptc.wbpz       automation/          data/outputs/*.csv      ml/          
 | `data/inputs/` | Design sets. `TIM_balanced_DOE_144.csv` is the one that was run. See [`data/inputs/README.md`](data/inputs/README.md) |
 | `data/outputs/` | Results written by the runner. `TIM_balanced_DOE_144_outputs.csv` holds the 144 runs |
 | `ml/` | Surrogate, optimisation, sensitivity. See [`ml/README.md`](ml/README.md) |
-| `dashboard/` | Dashboard builder, template and the built page. See [`dashboard/README.md`](dashboard/README.md) |
+| `dashboard/` | The web dashboard and its data export script. See [`dashboard/README.md`](dashboard/README.md) |
 | `report/` | Report outline (official 8 sections) and drafts |
 | `docs/`, `materials/` | Empty for now |
 
 ## Getting started
 
-Requirements: Python 3.12, Git with Git LFS. Running the Ansys batch also needs Windows and Ansys 2026 R1 with a Mechanical licence. Everything else runs on any OS.
+Requirements: Python 3.12, Git with Git LFS, and Node 24 with pnpm for the dashboard. Running the Ansys batch also needs Windows and Ansys 2026 R1 with a Mechanical licence. Everything else runs on any OS.
 
 ```
 git lfs install
@@ -65,10 +65,10 @@ pip install -r requirements.txt
 cd ml
 python run_all.py ../data/inputs/TIM_balanced_DOE_144.csv ../data/outputs/TIM_balanced_DOE_144_outputs.csv
 cd ..
-python dashboard/build_dashboard.py
+python dashboard/scripts/export_data.py
 ```
 
-This retrains the surrogate, writes figures and tables to `ml/out/`, and rebuilds `dashboard/index.html`. It takes about a minute.
+This retrains the surrogate, writes figures and tables to `ml/out/`, and refreshes the dashboard's data (`dashboard/src/data/dashboard.json`). It takes about a minute.
 
 ### Run designs through Ansys (Windows)
 
@@ -82,10 +82,10 @@ Run the same command again to resume after a stop. Details and options: [`automa
 ### Tests
 
 ```
-python -m unittest automation/test_run_batch.py ml/test_load_runs.py dashboard/test_build_dashboard.py
+python -m unittest automation/test_run_batch.py ml/test_load_runs.py dashboard/scripts/test_export_data.py
 ```
 
-No Ansys needed. GitHub Actions runs the same tests on every push.
+No Ansys needed. GitHub Actions runs the same tests and a type-checked dashboard build on every push.
 
 ## Modelling assumptions and limits
 

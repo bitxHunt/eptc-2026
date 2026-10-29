@@ -1,5 +1,5 @@
-# Unit tests for the batch runner, the ML loader and the dashboard export.
-# None of them need Ansys, so they run on a plain Linux runner.
+# Unit tests for the batch runner, the ML loader and the dashboard export, plus a
+# type-checked build of the dashboard. None of them need Ansys.
 name: tests
 
 on:
@@ -7,7 +7,7 @@ on:
   pull_request:
 
 jobs:
-  test:
+  python:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,4 +18,22 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt
-      - run: python -m unittest automation/test_run_batch.py ml/test_load_runs.py dashboard/test_build_dashboard.py -v
+      - run: python -m unittest automation/test_run_batch.py ml/test_load_runs.py dashboard/scripts/test_export_data.py -v
+
+  dashboard:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: dashboard/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
