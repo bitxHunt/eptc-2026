@@ -1,50 +1,49 @@
 # Workbench parameters in `model/eptc.wbpz`
 
-Read from the archive as committed on 18 Oct (project saved 18 Oct 10:21 UTC, Workbench 2026 R1, build 26.1.175). Sources: `chip_package_test.wbpj` (the project index) and `session_files/journal4.wbjn` (the recorded journal that created P1 to P8).
+The V2 model (archived 29 Oct 2026, Workbench 2026 R1, build 26.1.175). The maps at the top of `batch.wbjn` (`INPUT_MAP`, `FIXED`, `OUTPUT_MAP`) must match this table. If the model changes, update both and run `data/inputs/test_runs.csv` before a long batch.
 
 Project unit system: Metric (kg, m, s, °C). `batch.wbjn` writes every input with its unit spelled out, so the unit system doesn't matter.
 
-## What the model has
+## Inputs
 
-| ID | Name in Workbench | Belongs to | Value on DP 0 | Contract column |
+| ID | Workbench parameter | Material | CSV column | Note |
 |---|---|---|---|---|
-| P1 | Young's Modulus | TIM 1 | 10000000 [Pa] | `E1` |
-| P2 | Poisson's Ratio | TIM 1 | 0.45 | none. **Drop it** (untick P) |
-| P3 | Coefficient of Thermal Expansion | TIM 1 | 0.0001 [C^-1] | `a1` |
-| P4 | Thermal Conductivity | TIM 1 | 5 [W m^-1 C^-1] | `k1` |
-| P5 | Young's Modulus | TIM 2 | 10000000 [Pa] | `E2` |
-| P6 | Poisson's Ratio | TIM 2 | 0.45 | none. **Drop it** |
-| P7 | Coefficient of Thermal Expansion | TIM 2 | 0.0001 [C^-1] | `a2` |
-| P8 | Thermal Conductivity | TIM 2 | 5 [W m^-1 C^-1] | `k2` |
-| P9 | Temperature scope Minimum | thermal | 603.97 [C] | `Tmin` (info only) |
-| P10 | Temperature scope Maximum | thermal | 629.26 [C] | `Tj` |
-| P11 | Maximum Principal Stress scope 1 Minimum | structural | 3.21 [MPa] | `tim1_s1_min` |
-| P12 | Maximum Principal Stress scope 1 Maximum | structural | 26.27 [MPa] | `tim1_s1_max` |
-| P13 | Maximum Principal Stress scope 2 Minimum | structural | -4.44 [MPa] | `tim2_s1_min` |
-| P14 | Maximum Principal Stress scope 2 Maximum | structural | 31.61 [MPa] | `tim2_s1_max` |
-| P15 | Shear Stress scope 1 Minimum | structural | -4.67 [MPa] | `tim1_shear_min` |
-| P16 | Shear Stress scope 1 Maximum | structural | 4.73 [MPa] | `tim1_shear_max` |
-| P17 | Shear Stress scope 2 Minimum | structural | -10.42 [MPa] | `tim2_shear_min` |
-| P18 | Shear Stress scope 2 Maximum | structural | 10.51 [MPa] | `tim2_shear_max` |
+| P1 | Young's Modulus | TIM 1 | `E1` | Thin-layer scaled for BLT |
+| P2 | Poisson's Ratio | TIM 1 | none | Pinned to 0.45 every run |
+| P3 | Coefficient of Thermal Expansion | TIM 1 | `a1` | |
+| P4 | Thermal Conductivity | TIM 1 | `k1` | Thin-layer scaled for BLT |
+| P5 | Young's Modulus | TIM 2 | `E2` | Thin-layer scaled for BLT |
+| P6 | Poisson's Ratio | TIM 2 | none | Pinned to 0.45 every run |
+| P7 | Coefficient of Thermal Expansion | TIM 2 | `a2` | |
+| P8 | Thermal Conductivity | TIM 2 | `k2` | Thin-layer scaled for BLT |
 
-P1 to P4 belong to TIM 1 because journal4 created them on the original `TIM` material and renamed it `TIM 1`. P5 to P8 are on its duplicate. The output values are the old 11 Oct baseline (629 °C chip), so they are stale.
+BLT and the heat sink film coefficient are not parameters. BLT reaches the model through k and E (see `automation/README.md`). The film coefficient is fixed at 150 W/m²K.
 
-There is one design point (DP 0). Design point updates are set to Foreground and run locally.
+## Outputs
 
-## Not checked from the files
+| ID | Workbench result | Scope | CSV column |
+|---|---|---|---|
+| P9 | Temperature, Minimum | Silicon die | `Tmin` |
+| P10 | Temperature, Maximum | Silicon die | `Tj` |
+| P19 | Temperature, Maximum | Lid top face, above the die | `Tcase` |
+| P20 | Temperature, Average | Lid top face | `Tcase_avg` |
+| P21 | Convection heat (negative = leaving) | Heat sink | `Q_out` |
+| P22 | Equivalent (von Mises) stress, Average | TIM-1 body | `tim1_vm_avg` |
+| P23 | Equivalent (von Mises) stress, Maximum | TIM-1 body | `tim1_vm_max` |
+| P24 | Equivalent (von Mises) stress, Maximum | TIM-2 body | `tim2_vm_max` |
+| P25 | Equivalent (von Mises) stress, Average | TIM-2 body | `tim2_vm_avg` |
+| P26 | Total deformation, Maximum | All bodies | `deform_total_max` |
+| P27 | Directional deformation Y, Maximum | Substrate | `warp_y_max` |
+| P28 | Directional deformation Y, Minimum | Substrate | `warp_y_min` |
+| P29 | Maximum shear stress on path, Maximum | TIM-1 edge path | `tim1_edge_shear_max` |
+| P30 | Maximum shear stress on path, Average | TIM-1 edge path | `tim1_edge_shear_avg` |
+| P31 | Maximum shear stress on path, Maximum | TIM-2 edge path | `tim2_edge_shear_max` |
+| P32 | Maximum shear stress on path, Average | TIM-2 edge path | `tim2_edge_shear_avg` |
 
-- **Which bodies "scope 1" and "scope 2" are.** The scoping is in `SYS.mechdb`, which can't be read as text. The runner assumes scope 1 = TIM-1 and scope 2 = TIM-2. Check in Mechanical and swap the P numbers in `OUTPUT_MAP` in `batch.wbjn` if needed.
-- **Which bodies "Temperature scope" covers.** For `Tj` it must be the Silicon Die body only (Ansys step 3 in the team plan).
-- Shear stress has no component in its name. Check which one (XY, YZ, XZ) it is, since the TIM's in-plane shear is the useful one.
+P11 to P18 are left over from V1 (principal and shear stress on bodies that were never checked) and are not read.
 
-## Missing from the model (the contract needs these)
+**Edge paths.** A 1 mm straight path along the diagonal, from 0.5 to 1.5 mm in from the TIM corner, at the TIM mid-plane: TIM-1 at y = 0.003125 m, TIM-2 at y = 0.005225 m. Starting 0.5 mm in avoids the stress singularity at the free corner of a perfectly bonded layer. The mid-plane heights don't change with BLT, because BLT is not a geometry change.
 
-| Contract column | Status | What to add in Workbench |
-|---|---|---|
-| `Tcase` | **missing** | Temperature result on the IHS top face, Maximum ticked as P. Without it there is no `theta_jc`, so no validation against Hu et al. |
-| `blt1`, `blt2` | **missing** | Thickness as `DS_BLT1` and `DS_BLT2` from SolidWorks, or a Discovery dimension. The model is fixed at TIM-1 50 µm and TIM-2 150 µm |
-| `h` (film coefficient) | **missing** | Tick P on the heat sink Convection film coefficient. Still 10 W/m²K |
-| `warpage` | **missing** | Total Deformation (or directional Y) on the package or substrate, Maximum ticked as P |
-| Average TIM stress | **missing** | Tick Average as well as Maximum on the four stress results (the corner maximum depends on the mesh) |
+## V2 baseline (TIM-1 and TIM-2 at k 5 W/mK, E 10 MPa, BLT 50 / 150 µm)
 
-Once one of these is added, put its P number in `INPUT_MAP` or `OUTPUT_MAP` at the top of `batch.wbjn`. For an input, also remove it from `NOT_IN_MODEL` in `run_batch.py`. Workbench numbers new parameters from P19 up.
+Tj 131.0 °C, Tcase 117.9 °C, heat out 400 W, θJC 0.033 °C/W, warpage 26 µm, TIM-1 edge shear 0.69 MPa, TIM-2 edge shear 0.19 MPa.

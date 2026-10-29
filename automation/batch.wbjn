@@ -15,8 +15,8 @@
 # inputs, Update(), read the outputs, write a row, move on. A failed design is
 # written as status=failed and the loop carries on.
 #
-# Lines marked VERIFY are calls not yet checked against a journal recorded on
-# 2026 R1 (File > Scripting > Record Journal). Check those first.
+# Checked on 2026 R1 (build 26.1.175): 144 designs ran headless on 29 Oct with
+# 0 failures, so Open, Unarchive and GetParameterValue below work as written.
 SetScriptVersion(Version="26.1.175")
 
 import os
@@ -73,7 +73,7 @@ OUTPUT_MAP = [
 def read_job():
     path = os.environ.get("EPTC_JOB")
     if not path:
-        from System import Environment  # VERIFY: os.environ is normally enough in IronPython
+        from System import Environment  # fallback; os.environ is normally enough in IronPython
         path = Environment.GetEnvironmentVariable("EPTC_JOB")
     job = {}
     for line in open(path):
@@ -102,9 +102,9 @@ def write_row(path, values):
 
 job = read_job()
 if os.path.exists(job["project"]):
-    Open(FilePath=job["project"])  # VERIFY
+    Open(FilePath=job["project"])
 else:
-    Unarchive(ArchivePath=job["archive"], ProjectPath=job["project"], Overwrite=True)  # VERIFY
+    Unarchive(ArchivePath=job["archive"], ProjectPath=job["project"], Overwrite=True)
 
 designPoint = Parameters.GetDesignPoint(Name="0")
 out_cols = [name for name, pid in OUTPUT_MAP]
@@ -131,7 +131,7 @@ for row in read_rows(job["inputs"]):
             if pid is None:
                 values.append("")
             else:
-                values.append(designPoint.GetParameterValue(Parameters.GetParameter(Name=pid)))  # VERIFY: returns a Quantity, str() gives "629.25 [C]"
+                values.append(designPoint.GetParameterValue(Parameters.GetParameter(Name=pid)))  # a Quantity; str() gives "629.25 [C]"
         write_row(job["outputs"], [row["run_id"], "solved"] + values + ["%.1f" % (time.time() - start), ""])
     except Exception as e:
         write_row(job["outputs"], [row["run_id"], "failed"] + [""] * len(out_cols) + ["%.1f" % (time.time() - start), e])

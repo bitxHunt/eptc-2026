@@ -15,3 +15,6 @@
 *.md    text eol=lf
 *.csv   text eol=lf
 *.wbjn  text eol=crlf
+*.html  text eol=lf
+*.js    text eol=lf
+*.yml   text eol=lf

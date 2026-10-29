@@ -22,8 +22,11 @@ from datetime import datetime
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-RUNWB2 = r"C:\Program Files\ANSYS Inc\v261\Framework\bin\Win64\RunWB2.exe"
+# The Ansys installer sets AWP_ROOT261 to the 2026 R1 install folder
+RUNWB2 = str(Path(os.environ.get("AWP_ROOT261", r"C:\Program Files\ANSYS Inc\v261"))
+             / "Framework" / "bin" / "Win64" / "RunWB2.exe")
 POWER_W = 400.0
+MIN_PER_DESIGN = 2.5    # measured on the 144-design batch, 4-core laptop, Workbench overhead included
 
 # Contract input columns, in contract units: k W/mK, E Pa, a 1/K, blt um, h W/m2K.
 INPUT_COLS = ["k1", "E1", "a1", "blt1", "k2", "E2", "a2", "blt2", "h"]
@@ -221,6 +224,9 @@ def main(argv=None):
     p.add_argument("--runwb2", default=RUNWB2)
     p.add_argument("--timeout", type=int, default=900, help="seconds allowed per design (default 900)")
     p.add_argument("--no-retry-failed", action="store_true", help="skip failed run_ids instead of retrying them")
+    p.add_argument("--retries", type=int, default=1,
+                   help="extra passes over designs that failed in this session, e.g. a licence "
+                        "server outage (default 1)")
     p.add_argument("--dry-run", action="store_true", help="print the plan, run nothing")
     args = p.parse_args(argv)
     # Workbench runs inside the chunk folder, so every path in job.txt must be absolute.
@@ -237,7 +243,7 @@ def main(argv=None):
     log("%d designs in %s, %d already done, %d to run in %d chunks of up to %d"
         % (len(rows), args.inputs.name, len(rows) - len([r for r in rows if r["run_id"] not in skip]),
            len(todo), len(chunks), args.chunk))
-    log("estimate at 4 min per design: %.1f h" % (len(todo) * 4 / 60))
+    log("estimate at %.1f min per design: %.1f h" % (MIN_PER_DESIGN, len(todo) * MIN_PER_DESIGN / 60))
     for col, (values, model_value) in ignored_inputs(todo).items():
         log("WARNING: %s varies (%s) but is not a parameter in the model yet; every run uses %g"
             % (col, ", ".join("%g" % v for v in values[:6]) + (" ..." if len(values) > 6 else ""), model_value))
@@ -261,17 +267,34 @@ def main(argv=None):
         log("archive is newer than the restored project, restoring again")
         shutil.rmtree(project)
     project.mkdir(parents=True, exist_ok=True)
-    start = time.time()
-    for n, chunk in enumerate(chunks, 1):
-        results = run_chunk(n, chunk, args, args.work)
+    failed = run_chunks(chunks, args, out, first_chunk=1)
+    for attempt in range(1, args.retries + 1):
+        if not failed:
+            break
+        log("retry %d of %d: %d failed designs" % (attempt, args.retries, len(failed)))
+        retry = [r for r in todo if r["run_id"] in failed]
+        n0 = len(chunks) * attempt + 1    # new chunk folders, so the first attempt's logs stay
+        failed = run_chunks([retry[i:i + args.chunk] for i in range(0, len(retry), args.chunk)],
+                            args, out, first_chunk=n0)
+    if failed:
+        log("still failed: %s. Run the same command again to retry them." % ", ".join(sorted(failed)))
+    return 0
+
+
+def run_chunks(chunks, args, out, first_chunk):
+    """Run the chunks in order, append results to `out`, return the run_ids that failed."""
+    failed, start = set(), time.time()
+    for i, chunk in enumerate(chunks):
+        results = run_chunk(first_chunk + i, chunk, args, args.work)
         append_outputs(out, results)
+        failed |= {r["run_id"] for r in results if r["status"] != "solved"}
         ok = sum(r["status"] == "solved" for r in results)
         elapsed = time.time() - start
-        left = sum(len(c) for c in chunks[n:])
+        left = sum(len(c) for c in chunks[i + 1:])
         log("chunk %d/%d: %d solved, %d failed. %.0f min so far, about %.0f min left"
-            % (n, len(chunks), ok, len(results) - ok, elapsed / 60,
-               elapsed / sum(len(c) for c in chunks[:n]) * left / 60))
-    return 0
+            % (i + 1, len(chunks), ok, len(results) - ok, elapsed / 60,
+               elapsed / sum(len(c) for c in chunks[:i + 1]) * left / 60))
+    return failed
 
 
 if __name__ == "__main__":

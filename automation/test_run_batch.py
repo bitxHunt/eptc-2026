@@ -79,6 +79,30 @@ class RunBatchTest(unittest.TestCase):
         rb.append_outputs(out, [rb.convert_row({"run_id": "R1", "status": "solved", "Tj": "90 [C]"}, 1)])
         self.assertEqual(rb.main([str(inputs), "--out", str(out), "--dry-run", "--chunk", "1"]), 0)
 
+    def test_failed_designs_retried_once(self):
+        # R2 fails on the first pass (say, a licence outage) and solves on the retry
+        calls = []
+
+        def fake_chunk(n, rows, args, work):
+            calls.append([r["run_id"] for r in rows])
+            first = len(calls) <= 2
+            return [rb.convert_row({"run_id": r["run_id"], "Tj": "90 [C]",
+                                    "status": "failed" if first and r["run_id"] == "R2" else "solved"}, n)
+                    for r in rows]
+
+        inputs, out = self.write_inputs(), self.tmp / "out.csv"
+        fake_exe = self.tmp / "RunWB2.exe"
+        fake_exe.write_text("")
+        real = rb.run_chunk
+        rb.run_chunk = fake_chunk
+        try:
+            rb.main([str(inputs), "--out", str(out), "--chunk", "2", "--runwb2", str(fake_exe),
+                     "--archive", str(fake_exe), "--work", str(self.tmp / "work")])
+        finally:
+            rb.run_chunk = real
+        self.assertEqual(calls, [["R1", "R2"], ["R3"], ["R2"]])
+        self.assertEqual(rb.done_ids(out), {"R1", "R2", "R3"})
+
 
 if __name__ == "__main__":
     unittest.main()

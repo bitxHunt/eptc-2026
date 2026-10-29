@@ -1,0 +1,21 @@
+# Unit tests for the batch runner, the ML loader and the dashboard export.
+# None of them need Ansys, so they run on a plain Linux runner.
+name: tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false          # the Ansys archive and CAD part are not needed for tests
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m unittest automation/test_run_batch.py ml/test_load_runs.py dashboard/test_build_dashboard.py -v
