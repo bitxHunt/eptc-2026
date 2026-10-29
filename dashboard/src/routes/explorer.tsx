@@ -16,8 +16,10 @@ import {
   distanceToProducts,
   fromSlider,
   matchingRun,
+  nearestRun,
   span,
   stateFromRun,
+  testedValues,
   toDesign,
   toSlider,
   type DesignState,
@@ -49,6 +51,7 @@ function Explorer() {
   const design = useMemo(() => toDesign(s), [s])
   const p = useMemo(() => predict(design), [design])
   const match = matchingRun(design)
+  const near = useMemo(() => (match ? undefined : nearestRun(design)), [match, design])
   const extrapolating = s.tim1 === CUSTOM && distanceToProducts(design) > 0.25
   const set = (patch: Partial<DesignState>) => setS((prev) => ({ ...prev, ...patch }))
 
@@ -88,8 +91,8 @@ function Explorer() {
               </Select>
             </Field>
             <RangeField label="Conductivity k" value={`${+s.k1.toPrecision(3)} W/mK`} sp={span(s, "k1")} v={s.k1} onChange={(k1) => set({ k1 })} />
-            <RangeField label="Modulus E" value={fmtModulus(s.E1)} sp={span(s, "E1")} v={s.E1} onChange={(E1) => set({ E1 })} />
-            <RangeField label="CTE" value={`${s.a1.toFixed(0)} ppm/K`} sp={span(s, "a1")} v={s.a1} onChange={(a1) => set({ a1 })} />
+            <RangeField label="Modulus E" value={fmtModulus(s.E1)} sp={span(s, "E1")} v={s.E1} snaps={testedValues(s, "E1")} onChange={(E1) => set({ E1 })} />
+            <RangeField label="CTE" value={`${s.a1.toFixed(0)} ppm/K`} sp={span(s, "a1")} v={s.a1} snaps={testedValues(s, "a1")} onChange={(a1) => set({ a1 })} />
             <RangeField label="Bond line" value={`${s.blt1} µm`} sp={[30, 50, false]} v={s.blt1} step={10} onChange={(blt1) => set({ blt1: Math.round(blt1) })} />
           </Layer>
           <Separator />
@@ -104,7 +107,7 @@ function Explorer() {
                 </SelectContent>
               </Select>
             </Field>
-            <RangeField label="Modulus E" value={fmtModulus(s.E2)} sp={span(s, "E2")} v={s.E2} onChange={(E2) => set({ E2 })} />
+            <RangeField label="Modulus E" value={fmtModulus(s.E2)} sp={span(s, "E2")} v={s.E2} snaps={testedValues(s, "E2")} onChange={(E2) => set({ E2 })} />
             <RangeField label="Bond line" value={`${s.blt2} µm`} sp={[30, 50, false]} v={s.blt2} step={10} onChange={(blt2) => set({ blt2: Math.round(blt2) })} />
           </Layer>
         </Panel>
@@ -122,7 +125,17 @@ function Explorer() {
                 {match ? (
                   <>Same design as Ansys run <span className="font-mono">{match.run_id}</span></>
                 ) : (
-                  "No Ansys run at this exact design"
+                  <>
+                    Prediction only. Closest Ansys run{" "}
+                    <button
+                      type="button"
+                      onClick={() => setS(stateFromRun(near!))}
+                      className="rounded font-mono text-foreground underline decoration-muted-foreground/50 underline-offset-2 hover:decoration-foreground focus-visible:outline-2 focus-visible:outline-ring"
+                    >
+                      {near!.run_id}
+                    </button>
+                    <span className="tabular">: θJC {fmt(near!.theta_jc, "theta_jc")}, Tj {fmt(near!.Tj, "Tj")} °C</span>
+                  </>
                 )}
               </span>
             }
@@ -170,12 +183,16 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
+// Within this many slider steps (of 1000) of a tested value, the slider snaps onto it
+const SNAP = 25
+
 function RangeField({
   label,
   value,
   sp,
   v,
   step,
+  snaps = [],
   onChange,
 }: {
   label: string
@@ -183,6 +200,7 @@ function RangeField({
   sp: [number, number, boolean]
   v: number
   step?: number
+  snaps?: number[]
   onChange: (v: number) => void
 }) {
   const fixed = sp[0] === sp[1]
@@ -203,8 +221,24 @@ function RangeField({
         max={1000}
         step={linearStep}
         value={[toSlider(v, sp)]}
-        onValueChange={(val) => onChange(fromSlider(Array.isArray(val) ? val[0] : (val as number), sp))}
+        onValueChange={(val) => {
+          const pos = Array.isArray(val) ? val[0] : (val as number)
+          const hit = snaps.find((t) => Math.abs(toSlider(t, sp) - pos) <= SNAP)
+          onChange(hit ?? fromSlider(pos, sp))
+        }}
       />
+      {!fixed && snaps.length > 1 && (
+        <div className="relative -mt-1 h-1.5" aria-hidden>
+          {snaps.map((t) => (
+            <span
+              key={t}
+              title="Tested in Ansys"
+              className="absolute top-0 size-1 -translate-x-1/2 rounded-full bg-muted-foreground/60"
+              style={{ left: `${toSlider(t, sp) / 10}%` }}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

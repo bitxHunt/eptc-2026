@@ -54,6 +54,26 @@ export function matchingRun(d: Design): Run | undefined {
   )
 }
 
+/** The solved run closest to a design, on the same log / linear scales the surrogate uses. */
+export function nearestRun(d: Design): Run {
+  const unit = (c: (typeof data.input_cols)[number], v: number) => {
+    const [lo, hi, scale] = data.inputs[c]
+    if (scale === "fixed") return 0
+    return scale === "log" ? (Math.log10(v) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo)) : (v - lo) / (hi - lo)
+  }
+  const dist = (r: Run) => data.input_cols.reduce((s, c) => s + (unit(c, r[c]) - unit(c, d[c])) ** 2, 0)
+  return data.runs.reduce((a, b) => (dist(b) < dist(a) ? b : a))
+}
+
+/** Values Ansys actually ran for a slider, given the chosen products: the slider snaps to these. */
+export function testedValues(s: DesignState, key: "E1" | "a1" | "E2"): number[] {
+  const t1 = tim1Products.find((p) => p.name === s.tim1)
+  const t2 = tim2Products.find((p) => p.name === s.tim2)
+  if (key === "E2") return t2?.E ?? []
+  if (!t1) return []
+  return key === "E1" ? t1.E : t1.cte
+}
+
 /** Distance in (log k, log E) to the nearest tested TIM-1 product: large means the GP extrapolates. */
 export function distanceToProducts(d: Design): number {
   return Math.min(
