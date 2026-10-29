@@ -1,7 +1,8 @@
 import { data, type Design, type Run } from "@/lib/data"
 import { tim1Products, tim2Products } from "@/lib/materials"
 
-export const CUSTOM = "custom"
+// Doubles as the select label, since the select shows the value of the chosen item
+export const CUSTOM = "Custom material"
 
 /** What the explorer controls hold. k2 and a2 follow the TIM-2 product. */
 export interface DesignState {
@@ -45,6 +46,15 @@ export function fromSlider(pos: number, [lo, hi, log]: [number, number, boolean]
   if (lo === hi) return lo
   const f = pos / 1000
   return log ? 10 ** (Math.log10(lo) + f * (Math.log10(hi) - Math.log10(lo))) : lo + f * (hi - lo)
+}
+
+// Within this many slider steps (of 1000) of a tested value, the slider snaps onto it
+export const SNAP_STEPS = 25
+
+/** Slider position to value, snapping onto a tested value when the position is close to one. */
+export function snapValue(pos: number, sp: [number, number, boolean], snaps: number[]): number {
+  const hit = snaps.find((t) => Math.abs(toSlider(t, sp) - pos) <= SNAP_STEPS)
+  return hit ?? fromSlider(pos, sp)
 }
 
 /** A solved run with exactly this design, if any. */

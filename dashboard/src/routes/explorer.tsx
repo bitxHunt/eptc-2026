@@ -14,9 +14,10 @@ import { data, runById, type OutputKey } from "@/lib/data"
 import {
   CUSTOM,
   distanceToProducts,
-  fromSlider,
   matchingRun,
+  fromSlider,
   nearestRun,
+  snapValue,
   span,
   stateFromRun,
   testedValues,
@@ -135,7 +136,7 @@ function Explorer() {
                       {near!.run_id}
                     </button>
                     <span className="tabular">
-                      {" "}(E {fmtModulus(near!.E1)}, {near!.blt1}/{near!.blt2} µm): θJC {fmt(near!.theta_jc, "theta_jc")}, edge shear{" "}
+                      {" "}({s.tim1 === CUSTOM && `${near!.tim1}, `}E {fmtModulus(near!.E1)}, {near!.blt1}/{near!.blt2} µm): θJC {fmt(near!.theta_jc, "theta_jc")}, edge shear{" "}
                       {fmt(near!.tim1_edge_tau_max)} MPa
                     </span>
                   </>
@@ -186,9 +187,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-// Within this many slider steps (of 1000) of a tested value, the slider snaps onto it
-const SNAP = 25
-
 function RangeField({
   label,
   value,
@@ -218,20 +216,21 @@ function RangeField({
         </span>
       </div>
       <Slider
-        aria-label={label}
+        thumbProps={{ "aria-label": label, getAriaValueText: () => value }}
         disabled={fixed}
         min={0}
         max={1000}
         step={linearStep}
         value={[toSlider(v, sp)]}
-        onValueChange={(val) => {
+        onValueChange={(val, details) => {
           const pos = Array.isArray(val) ? val[0] : (val as number)
-          const hit = snaps.find((t) => Math.abs(toSlider(t, sp) - pos) <= SNAP)
-          onChange(hit ?? fromSlider(pos, sp))
+          // Snap only for the pointer: arrow keys move one step, which would snap straight back
+          const pointer = details.reason === "drag" || details.reason === "track-press"
+          onChange(pointer ? snapValue(pos, sp, snaps) : fromSlider(pos, sp))
         }}
       />
       {!fixed && snaps.length > 1 && (
-        <div className="relative -mt-1 h-1.5" aria-hidden>
+        <div className="relative -mt-1 mx-1.5 h-1.5" aria-hidden>
           {snaps.map((t) => (
             <span
               key={t}
