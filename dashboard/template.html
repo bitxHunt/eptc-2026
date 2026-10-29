@@ -1,0 +1,785 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TIM Design Explorer</title>
+<style>
+:root {
+  color-scheme: light;
+  --page: #f4f3ef;
+  --surface-1: #fcfcfb;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #77756f;
+  --grid: #e1e0d9;
+  --border: rgba(11, 11, 11, 0.10);
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --neutral-mark: #8d8b84;
+  --region: rgba(42, 120, 214, 0.08);
+  --warn-bg: #fff4dc;
+  --warn-ink: #7a4f00;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --page: #111110;
+    --surface-1: #1a1a19;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #9a988f;
+    --grid: #2c2c2a;
+    --border: rgba(255, 255, 255, 0.10);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --neutral-mark: #7c7a73;
+    --region: rgba(57, 135, 229, 0.12);
+    --warn-bg: #3a2c0c;
+    --warn-ink: #f2c66b;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --page: #111110;
+  --surface-1: #1a1a19;
+  --text-primary: #f0efec;
+  --text-secondary: #c3c2b7;
+  --text-muted: #9a988f;
+  --grid: #2c2c2a;
+  --border: rgba(255, 255, 255, 0.10);
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --neutral-mark: #7c7a73;
+  --region: rgba(57, 135, 229, 0.12);
+  --warn-bg: #3a2c0c;
+  --warn-ink: #f2c66b;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--page); color: var(--text-primary);
+  font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+.wrap { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+header { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; margin-bottom: 20px; }
+h1 { font-size: 22px; margin: 0; letter-spacing: -0.01em; }
+.sub { color: var(--text-secondary); margin: 4px 0 0; max-width: 62ch; }
+.meta { color: var(--text-muted); font-size: 12px; text-align: right; }
+.toggle { font: inherit; font-size: 12px; color: var(--text-secondary); background: var(--surface-1); border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; margin-top: 6px; }
+nav { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 16px; }
+nav a { color: var(--text-secondary); text-decoration: none; font-size: 13px; padding: 4px 10px; border-radius: 999px; background: var(--surface-1); border: 1px solid var(--border); }
+nav a:hover { color: var(--text-primary); }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 18px; margin-bottom: 16px; min-width: 0; }
+.card h2 { font-size: 16px; margin: 0 0 2px; }
+.card .lede { color: var(--text-secondary); margin: 0 0 14px; font-size: 13px; max-width: 80ch; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 860px) { .grid2 { grid-template-columns: 1fr; } }
+.explorer { display: grid; grid-template-columns: 300px 1fr; gap: 20px; }
+@media (max-width: 760px) { .explorer { grid-template-columns: 1fr; } }
+fieldset { border: 0; padding: 0; margin: 0 0 14px; min-width: 0; }
+legend { font-weight: 600; font-size: 13px; margin-bottom: 6px; padding: 0; }
+label { display: block; font-size: 12px; color: var(--text-secondary); margin: 8px 0 3px; }
+label output { float: right; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+select, input[type=range] { width: 100%; }
+select { font: inherit; font-size: 16px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--page); color: var(--text-primary); }
+input[type=range] { accent-color: var(--series-1); }
+input[type=range]:disabled { opacity: 0.4; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.tile { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.tile .k { font-size: 12px; color: var(--text-secondary); }
+.tile .v { font-size: 24px; font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.tile .u { font-size: 13px; color: var(--text-secondary); font-weight: 400; margin-left: 3px; }
+.tile .r { font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.track { position: relative; height: 4px; border-radius: 2px; background: var(--grid); margin: 8px 0 4px; }
+.track i { position: absolute; top: -4px; width: 4px; height: 12px; border-radius: 2px; background: var(--series-1); transform: translateX(-2px); }
+.note { font-size: 12px; color: var(--text-secondary); margin-top: 10px; }
+.warn { background: var(--warn-bg); color: var(--warn-ink); border-radius: 6px; padding: 8px 10px; font-size: 12px; margin-top: 10px; }
+.warn::before { content: "\26A0  "; }
+.chart { width: 100%; height: auto; display: block; overflow: visible; touch-action: pan-y; }
+.chart text { fill: var(--text-secondary); font-size: 11px; }
+.chart .axis-title { fill: var(--text-secondary); font-size: 12px; }
+.chart .gridline { stroke: var(--grid); stroke-width: 1; }
+.chart .baseline { stroke: var(--text-muted); stroke-width: 1; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--text-secondary); margin: 0 0 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend svg { overflow: visible; }
+.tip { position: fixed; pointer-events: none; z-index: 10; background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 6px 24px rgba(0,0,0,0.14); padding: 8px 10px; font-size: 12px; max-width: 280px; display: none; }
+.tip b { display: block; font-size: 13px; font-variant-numeric: tabular-nums; }
+.tip .s { color: var(--text-secondary); }
+table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 5px 8px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th:first-child, td:first-child, th.l, td.l { text-align: left; }
+th { color: var(--text-secondary); font-weight: 600; cursor: pointer; user-select: none; position: sticky; top: 0; background: var(--surface-1); }
+.scroll { overflow: auto; max-height: 460px; border: 1px solid var(--border); border-radius: 8px; }
+.pill { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-secondary); }
+dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; font-size: 13px; }
+dt { font-weight: 600; }
+dd { margin: 0; color: var(--text-secondary); }
+@media (max-width: 560px) { dl { grid-template-columns: 1fr; } dd { margin-bottom: 6px; } }
+.multiples { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px 20px; }
+.multiples h3 { font-size: 13px; margin: 0 0 4px; font-weight: 600; }
+.detail { font-size: 12px; color: var(--text-secondary); margin-top: 8px; min-height: 18px; }
+button.link { font: inherit; font-size: 12px; color: var(--series-1); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>TIM design explorer</h1>
+      <p class="sub">EPTC 2026 TIM challenge, 65 × 65 mm flip-chip package at 400 W. Ansys thermal–structural runs, a Gaussian process surrogate trained on them, and the trade-off between cooling and TIM stress.</p>
+    </div>
+    <div class="meta">
+      <div id="meta"></div>
+      <button class="toggle" id="theme" type="button">Theme: auto</button>
+    </div>
+  </header>
+  <nav>
+    <a href="#explore">Design explorer</a><a href="#tradeoff">Trade-off</a><a href="#map">Product map</a>
+    <a href="#drivers">What matters most</a><a href="#accuracy">Accuracy</a><a href="#runs">All runs</a><a href="#glossary">Glossary</a>
+  </nav>
+
+  <section class="card" id="explore">
+    <h2>Design explorer</h2>
+    <p class="lede">Pick a TIM-1 and TIM-2 product and their bond line thickness. The surrogate predicts the result instantly, without a new Ansys run. Each bar shows where the value sits among all solved runs.</p>
+    <div class="explorer">
+      <form id="controls" onsubmit="return false">
+        <fieldset>
+          <legend>TIM-1 (die to lid)</legend>
+          <label for="t1">Product</label><select id="t1"></select>
+          <label for="k1">Conductivity k <output id="k1o"></output></label><input type="range" id="k1" min="0" max="1" step="0.001">
+          <label for="E1">Modulus E <output id="E1o"></output></label><input type="range" id="E1" min="0" max="1" step="0.001">
+          <label for="a1">CTE <output id="a1o"></output></label><input type="range" id="a1" min="0" max="1" step="0.001">
+          <label for="blt1">Bond line <output id="blt1o"></output></label><input type="range" id="blt1" min="30" max="50" step="1">
+        </fieldset>
+        <fieldset>
+          <legend>TIM-2 (lid to heat sink)</legend>
+          <label for="t2">Product</label><select id="t2"></select>
+          <label for="E2">Modulus E <output id="E2o"></output></label><input type="range" id="E2" min="0" max="1" step="0.001">
+          <label for="blt2">Bond line <output id="blt2o"></output></label><input type="range" id="blt2" min="30" max="50" step="1">
+        </fieldset>
+      </form>
+      <div>
+        <div class="tiles" id="tiles"></div>
+        <div id="explain"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="tradeoff">
+    <h2>Trade-off: cooling against TIM stress</h2>
+    <p class="lede">Every solved Ansys run. Left is better cooling, down is lower stress at the TIM edge, where delamination starts. Filled blue points are not beaten on both at once by any other run (the Pareto set). Click a point to load it into the explorer.</p>
+    <div class="legend" id="tradeLegend"></div>
+    <svg class="chart" id="trade" viewBox="0 0 1100 420" role="img" aria-label="Scatter of theta JC against the worse TIM edge shear stress for every solved run"></svg>
+    <div class="detail" id="tradeDetail">Hover or tap a point for its values.</div>
+  </section>
+
+  <div class="grid2">
+    <section class="card" id="map">
+      <h2>Product map</h2>
+      <p class="lede">TIM products by conductivity and stiffness. Lines span the modulus values swept for one product. The best region is top left: high k cools, low E keeps edge stress down. Grey dots are the surrogate's optimum, which asks for materials no tested product has.</p>
+      <div class="legend" id="mapLegend"></div>
+      <svg class="chart" id="ashby" viewBox="0 0 540 400" role="img" aria-label="Conductivity against modulus for every TIM product"></svg>
+    </section>
+    <section class="card" id="drivers">
+      <h2>What matters most</h2>
+      <p class="lede">Share of each output's variation explained by each input alone (first-order Sobol index on the surrogate, 20,000 samples). Longer bar, stronger driver.</p>
+      <div class="multiples" id="sens"></div>
+    </section>
+  </div>
+
+  <section class="card" id="accuracy">
+    <h2>Surrogate accuracy</h2>
+    <p class="lede" id="accLede"></p>
+    <div class="multiples" id="parity"></div>
+    <div class="scroll" style="margin-top:14px;max-height:none"><table id="scoreTable"></table></div>
+  </section>
+
+  <section class="card" id="runs">
+    <h2>All runs</h2>
+    <p class="lede">The same data as the charts, as a table. Click a column to sort, click a row to load it into the explorer.</p>
+    <div class="scroll"><table id="runTable"></table></div>
+  </section>
+
+  <section class="card" id="glossary">
+    <h2>Glossary</h2>
+    <dl>
+      <dt>Tj</dt><dd>Junction temperature: the hottest point on the die. Most of it here comes from the heat sink and TIM-2, not TIM-1, so designs are ranked by θJC instead.</dd>
+      <dt>Tcase</dt><dd>Case temperature: the lid top at its centre, above the die.</dd>
+      <dt>θJC</dt><dd>Junction-to-case thermal resistance, (Tj − Tcase) / 400 W, in °C/W. Lower is better cooling. It does not depend on how good the heat sink is.</dd>
+      <dt>TIM-1, TIM-2</dt><dd>Thermal interface materials. TIM-1 sits between the die and the lid, TIM-2 between the lid and the heat sink.</dd>
+      <dt>k</dt><dd>Thermal conductivity, W/mK. Higher moves heat better.</dd>
+      <dt>E</dt><dd>Young's modulus, MPa. Higher is stiffer, so the TIM resists the die and lid expanding differently and carries more stress.</dd>
+      <dt>CTE</dt><dd>Coefficient of thermal expansion, ppm/K: how much the material grows when heated.</dd>
+      <dt>BLT</dt><dd>Bond line thickness, µm: how thick the TIM layer is.</dd>
+      <dt>Edge shear</dt><dd>Maximum shear stress on a 1 mm path 0.5 to 1.5 mm in from the TIM corner, at the TIM mid-plane. Starting 0.5 mm in avoids the corner singularity, so the value does not grow with mesh refinement.</dd>
+      <dt>Warpage</dt><dd>Out-of-plane bow of the substrate, max minus min vertical displacement, µm.</dd>
+      <dt>Pareto set</dt><dd>The designs that no other design beats on both cooling and stress at the same time. Choosing among them is a trade-off.</dd>
+      <dt>Surrogate</dt><dd>A Gaussian process fitted to the Ansys runs. It predicts a new design in milliseconds instead of about 3.5 minutes.</dd>
+      <dt>Hold-out runs</dt><dd>Runs kept out of training and used only to measure the surrogate's error.</dd>
+      <dt>Indium stress</dt><dd>Indium is modelled as linear elastic. Real indium yields at a few MPa and creeps, so its edge stress here is an upper bound, not a prediction.</dd>
+    </dl>
+  </section>
+</div>
+<div class="tip" id="tip" role="status"></div>
+
+<script>
+const D = /*__DATA__*/null;
+const NS = "http://www.w3.org/2000/svg";
+const $ = (id) => document.getElementById(id);
+
+/* ---------- theme ---------- */
+(() => {
+  const modes = ["auto", "light", "dark"];
+  let m = "auto";
+  try { m = localStorage.getItem("tim-theme") || "auto"; } catch (e) {}
+  const apply = () => {
+    if (m === "auto") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", m);
+    $("theme").textContent = "Theme: " + m;
+  };
+  $("theme").onclick = () => {
+    m = modes[(modes.indexOf(m) + 1) % 3];
+    try { localStorage.setItem("tim-theme", m); } catch (e) {}
+    apply();
+  };
+  apply();
+})();
+
+/* ---------- formatting ---------- */
+const LABEL = {
+  Tj: ["Tj", "°C"], Tcase: ["Tcase", "°C"], theta_jc: ["θJC", "°C/W"],
+  tim1_edge_tau_max: ["TIM-1 edge shear", "MPa"], tim2_edge_tau_max: ["TIM-2 edge shear", "MPa"],
+  warpage: ["Warpage", "µm"], stress_obj: ["Worse TIM edge shear", "MPa"],
+  Tcase_avg: ["Tcase, lid average", "°C"],
+  tim1_vm_avg: ["TIM-1 von Mises, average", "MPa"], tim1_vm_max: ["TIM-1 von Mises, max", "MPa"],
+  tim2_vm_avg: ["TIM-2 von Mises, average", "MPa"], tim2_vm_max: ["TIM-2 von Mises, max", "MPa"],
+  tim1_edge_tau_avg: ["TIM-1 edge shear, path average", "MPa"], tim2_edge_tau_avg: ["TIM-2 edge shear, path average", "MPa"],
+};
+const INPUT_LABEL = { k1: "TIM-1 k", E1: "TIM-1 E", a1: "TIM-1 CTE", blt1: "TIM-1 BLT",
+  k2: "TIM-2 k", E2: "TIM-2 E", a2: "TIM-2 CTE", blt2: "TIM-2 BLT" };
+function fmt(v, col) {
+  if (v == null || !isFinite(v)) return "–";
+  if (col === "theta_jc") return v.toFixed(4);
+  if (col === "Tj" || col === "Tcase") return v.toFixed(1);
+  if (col === "warpage") return v.toFixed(1);
+  const a = Math.abs(v);
+  if (a >= 100) return v.toFixed(0);
+  if (a >= 10) return v.toFixed(1);
+  if (a >= 1) return v.toFixed(2);
+  if (a >= 0.01) return v.toFixed(3);
+  return v.toPrecision(2);
+}
+function fmtE(mpa) {
+  if (mpa >= 1000) return (mpa / 1000).toFixed(mpa >= 10000 ? 1 : 2) + " GPa";
+  if (mpa >= 1) return mpa.toPrecision(3).replace(/\.?0+$/, "") + " MPa";
+  return (mpa * 1000).toPrecision(3).replace(/\.?0+$/, "") + " kPa";
+}
+
+/* ---------- surrogate in the browser ---------- */
+function toUnit(x) {
+  return D.input_cols.map((c) => {
+    const [lo, hi, s] = D.inputs[c];
+    if (s === "fixed") return 0;
+    if (s === "log") return (Math.log10(x[c]) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo));
+    return (x[c] - lo) / (hi - lo);
+  });
+}
+const S5 = Math.sqrt(5);
+function predict(x) {
+  const u = toUnit(x), out = {};
+  for (const [col, g] of Object.entries(D.gp)) {
+    let m = 0;
+    for (let i = 0; i < g.X.length; i++) {
+      const xi = g.X[i];
+      let d2 = 0;
+      for (let j = 0; j < u.length; j++) { const t = (u[j] - xi[j]) / g.ls[j]; d2 += t * t; }
+      const d = Math.sqrt(d2);
+      m += g.c * (1 + S5 * d + (5 / 3) * d2) * Math.exp(-S5 * d) * g.alpha[i];
+    }
+    const y = m * g.ys + g.ym;
+    out[col] = g.log ? Math.pow(10, y) : y;
+  }
+  out.stress_obj = Math.max(...D.stress_cols.map((c) => out[c]));
+  return out;
+}
+
+/* ---------- small SVG helpers ---------- */
+function el(tag, attrs, parent) {
+  const n = document.createElementNS(NS, tag);
+  for (const k in attrs) n.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(n);
+  return n;
+}
+function txt(parent, x, y, s, attrs = {}) {
+  const t = el("text", { x, y, ...attrs }, parent);
+  t.textContent = s;
+  return t;
+}
+function scale(d0, d1, r0, r1, log) {
+  const f = log ? Math.log10 : (v) => v;
+  const a = f(d0), b = f(d1);
+  const s = (v) => r0 + ((f(v) - a) / (b - a)) * (r1 - r0);
+  s.inv = (p) => { const v = a + ((p - r0) / (r1 - r0)) * (b - a); return log ? Math.pow(10, v) : v; };
+  return s;
+}
+function logTicks(lo, hi) {
+  const t = [];
+  for (let e = Math.floor(Math.log10(lo)); e <= Math.ceil(Math.log10(hi)); e++) {
+    const v = Math.pow(10, e);
+    if (v >= lo * 0.999 && v <= hi * 1.001) t.push(v);
+  }
+  return t;
+}
+function linTicks(lo, hi, n = 5) {
+  const step = Math.pow(10, Math.floor(Math.log10((hi - lo) / n)));
+  const m = [1, 2, 2.5, 5, 10].find((k) => (hi - lo) / (step * k) <= n) * step;
+  const t = [];
+  for (let v = Math.ceil(lo / m) * m; v <= hi + 1e-12; v += m) t.push(+v.toPrecision(10));
+  return t;
+}
+function tickLabel(v) {
+  if (v >= 1000) return v / 1000 + "k";
+  if (v < 0.01) return v.toExponential(0).replace("e-", "e−");
+  return String(+v.toPrecision(3));
+}
+function axes(svg, box, xs, ys, xt, yt, xTitle, yTitle) {
+  const g = el("g", {}, svg);
+  for (const v of yt) {
+    el("line", { x1: box.l, x2: box.r, y1: ys(v), y2: ys(v), class: "gridline" }, g);
+    txt(g, box.l - 8, ys(v) + 4, tickLabel(v), { "text-anchor": "end" });
+  }
+  for (const v of xt) txt(g, xs(v), box.b + 18, tickLabel(v), { "text-anchor": "middle" });
+  el("line", { x1: box.l, x2: box.r, y1: box.b, y2: box.b, class: "baseline" }, g);
+  txt(g, (box.l + box.r) / 2, box.b + 40, xTitle, { "text-anchor": "middle", class: "axis-title" });
+  const yl = txt(g, 0, 0, yTitle, { "text-anchor": "middle", class: "axis-title",
+    transform: `translate(${box.l - 52},${(box.t + box.b) / 2}) rotate(-90)` });
+  return g;
+}
+// Shapes carry the TIM-1 product, so identity never rests on colour alone
+const SHAPES = ["circle", "square", "triangle", "diamond"];
+function shape(parent, kind, x, y, r, attrs) {
+  if (kind === "circle") return el("circle", { cx: x, cy: y, r, ...attrs }, parent);
+  if (kind === "square") return el("rect", { x: x - r * 0.9, y: y - r * 0.9, width: r * 1.8, height: r * 1.8, rx: 1, ...attrs }, parent);
+  const pts = kind === "triangle"
+    ? [[x, y - r * 1.15], [x + r * 1.05, y + r * 0.75], [x - r * 1.05, y + r * 0.75]]
+    : [[x, y - r * 1.25], [x + r * 1.05, y], [x, y + r * 1.25], [x - r * 1.05, y]];
+  return el("polygon", { points: pts.map((p) => p.join(",")).join(" "), ...attrs }, parent);
+}
+function legendShape(kind, attrs) {
+  const s = document.createElementNS(NS, "svg");
+  s.setAttribute("width", 14); s.setAttribute("height", 14);
+  shape(s, kind, 7, 7, 5, attrs);
+  return s;
+}
+function legendItem(container, swatch, label) {
+  const span = document.createElement("span");
+  span.appendChild(swatch);
+  span.appendChild(document.createTextNode(label));
+  container.appendChild(span);
+}
+
+/* ---------- tooltip ---------- */
+const tip = $("tip");
+function showTip(evt, lines) {
+  tip.replaceChildren();
+  lines.forEach(([strong, rest], i) => {
+    const row = document.createElement("div");
+    if (strong) { const b = document.createElement("b"); b.textContent = strong; row.appendChild(b); }
+    if (rest) { const s = document.createElement("span"); s.className = "s"; s.textContent = rest; row.appendChild(s); }
+    tip.appendChild(row);
+  });
+  tip.style.display = "block";
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = evt.clientX + 14, y = evt.clientY + 14;
+  if (x + w > innerWidth - 8) x = evt.clientX - w - 14;
+  if (y + h > innerHeight - 8) y = evt.clientY - h - 14;
+  tip.style.left = Math.max(8, x) + "px"; tip.style.top = Math.max(8, y) + "px";
+}
+const hideTip = () => { tip.style.display = "none"; };
+function svgPoint(svg, evt) {
+  const p = svg.createSVGPoint(); p.x = evt.clientX; p.y = evt.clientY;
+  return p.matrixTransform(svg.getScreenCTM().inverse());
+}
+// Nearest-point hover: the pointer only has to be closest, within 24 px
+function nearestHover(svg, pts, onHover, onClick) {
+  const find = (evt) => {
+    const p = svgPoint(svg, evt);
+    const k = svg.getScreenCTM().a;
+    let best = null, bd = (24 / k) ** 2;
+    for (const q of pts) { const d = (q.x - p.x) ** 2 + (q.y - p.y) ** 2; if (d < bd) { bd = d; best = q; } }
+    return best;
+  };
+  // Assigned, not added, so a redraw on resize replaces the handlers
+  svg.onpointermove = (e) => onHover(find(e), e);
+  svg.onpointerleave = () => onHover(null);
+  svg.onclick = onClick ? (e) => { const q = find(e); if (q) onClick(q); } : null;
+}
+
+/* ---------- header ---------- */
+const th = D.scores.find((s) => s.output === "theta_jc");
+$("meta").textContent = `${D.n_solved} of ${D.n_total} runs solved · ${D.n_train} train, ${D.n_holdout} hold-out` +
+  (th ? ` · θJC hold-out error ${th.mape_pct.toFixed(2)} %` : "");
+
+const tim1Idx = Object.fromEntries(D.tim1.map((p, i) => [p.name, i]));
+
+/* ---------- design explorer ---------- */
+const state = {};
+const ctl = (id) => $(id);
+const CUSTOM = "__custom";
+function logPos(v, lo, hi) { return (Math.log10(v) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo)); }
+function logVal(p, lo, hi) { return Math.pow(10, Math.log10(lo) + p * (Math.log10(hi) - Math.log10(lo))); }
+
+function fillSelect(sel, list, custom) {
+  for (const p of list) { const o = document.createElement("option"); o.value = p.name; o.textContent = `${p.name} (k ${p.k})`; sel.appendChild(o); }
+  if (custom) { const o = document.createElement("option"); o.value = CUSTOM; o.textContent = "Custom material (any k and E)"; sel.appendChild(o); }
+}
+fillSelect(ctl("t1"), D.tim1, true);
+fillSelect(ctl("t2"), D.tim2, false);
+
+function rangeFor(id) {
+  // [lo, hi, log] the slider spans for the current product
+  const t1 = D.tim1.find((p) => p.name === ctl("t1").value);
+  const t2 = D.tim2.find((p) => p.name === ctl("t2").value);
+  const I = D.inputs;
+  if (id === "k1") return t1 ? [t1.k, t1.k, true] : [I.k1[0], I.k1[1], true];
+  if (id === "E1") return t1 ? [t1.E[0], t1.E[t1.E.length - 1], true] : [I.E1[0], I.E1[1], true];
+  if (id === "a1") return t1 ? [t1.cte[0], t1.cte[t1.cte.length - 1], false] : [I.a1[0], I.a1[1], false];
+  if (id === "E2") return [t2.E[0], t2.E[t2.E.length - 1], true];
+}
+function readSlider(id) {
+  const [lo, hi, log] = rangeFor(id);
+  const p = +ctl(id).value;
+  if (lo === hi) return lo;
+  return log ? logVal(p, lo, hi) : lo + p * (hi - lo);
+}
+function setSlider(id, v) {
+  const [lo, hi, log] = rangeFor(id);
+  ctl(id).disabled = lo === hi;
+  ctl(id).value = lo === hi ? 0.5 : log ? logPos(v, lo, hi) : (v - lo) / (hi - lo);
+}
+function onProduct(which) {
+  if (which === 1) {
+    const t1 = D.tim1.find((p) => p.name === ctl("t1").value);
+    if (t1) { setSlider("k1", t1.k); setSlider("E1", t1.E[Math.floor((t1.E.length - 1) / 2)]); setSlider("a1", t1.cte[Math.floor((t1.cte.length - 1) / 2)]); }
+    else { setSlider("k1", state.k1 || 30); setSlider("E1", state.E1 || 1); setSlider("a1", state.a1 || 60); }
+  } else {
+    const t2 = D.tim2.find((p) => p.name === ctl("t2").value);
+    setSlider("E2", t2.E[0]);
+  }
+  update();
+}
+ctl("t1").onchange = () => onProduct(1);
+ctl("t2").onchange = () => onProduct(2);
+for (const id of ["k1", "E1", "a1", "blt1", "E2", "blt2"]) ctl(id).oninput = update;
+
+function currentDesign() {
+  const t2 = D.tim2.find((p) => p.name === ctl("t2").value);
+  return {
+    k1: readSlider("k1"), E1: readSlider("E1"), a1: readSlider("a1"), blt1: +ctl("blt1").value,
+    k2: t2.k, E2: readSlider("E2"), a2: t2.cte[0], blt2: +ctl("blt2").value,
+  };
+}
+const ranges = {};
+for (const c of ["Tj", "theta_jc", "tim1_edge_tau_max", "tim2_edge_tau_max", "warpage", "Tcase"]) {
+  const v = D.runs.map((r) => r[c]).filter((x) => x != null);
+  ranges[c] = [Math.min(...v), Math.max(...v)];
+}
+const LOGTRACK = new Set(["tim1_edge_tau_max", "tim2_edge_tau_max"]);
+
+function update() {
+  const x = currentDesign();
+  Object.assign(state, x);
+  ctl("k1o").value = x.k1.toPrecision(3) + " W/mK";
+  ctl("E1o").value = fmtE(x.E1);
+  ctl("a1o").value = x.a1.toFixed(0) + " ppm/K";
+  ctl("blt1o").value = x.blt1 + " µm";
+  ctl("E2o").value = fmtE(x.E2);
+  ctl("blt2o").value = x.blt2 + " µm";
+  ctl("k1").disabled = ctl("t1").value !== CUSTOM;
+
+  const p = predict(x);
+  const tiles = $("tiles");
+  tiles.replaceChildren();
+  for (const c of ["theta_jc", "Tj", "tim1_edge_tau_max", "tim2_edge_tau_max", "warpage", "Tcase"]) {
+    if (p[c] == null) continue;
+    const [lo, hi] = ranges[c];
+    const pos = LOGTRACK.has(c) ? logPos(Math.max(p[c], lo), lo, hi) : (p[c] - lo) / (hi - lo);
+    const t = document.createElement("div"); t.className = "tile";
+    const k = document.createElement("div"); k.className = "k"; k.textContent = LABEL[c][0];
+    const v = document.createElement("div"); v.className = "v"; v.textContent = fmt(p[c], c);
+    const u = document.createElement("span"); u.className = "u"; u.textContent = LABEL[c][1]; v.appendChild(u);
+    const tr = document.createElement("div"); tr.className = "track";
+    const mk = document.createElement("i"); mk.style.left = (Math.min(1, Math.max(0, pos)) * 100) + "%"; tr.appendChild(mk);
+    const r = document.createElement("div"); r.className = "r"; r.textContent = `runs: ${fmt(lo, c)} to ${fmt(hi, c)}`;
+    t.append(k, v, tr, r); tiles.appendChild(t);
+  }
+
+  const ex = $("explain"); ex.replaceChildren();
+  // Same design in Ansys? Show the simulated values next to the prediction.
+  const same = D.runs.find((r) => D.input_cols.every((c) => Math.abs(r[c] - x[c]) <= 1e-3 * Math.max(1, Math.abs(x[c]))));
+  const n = document.createElement("div"); n.className = "note";
+  if (same) {
+    const err = 100 * (p.theta_jc - same.theta_jc) / same.theta_jc;
+    n.textContent = `Ansys run ${same.run_id} (${same.role}) has exactly this design: θJC ${fmt(same.theta_jc, "theta_jc")} °C/W, ` +
+      `TIM-1 edge shear ${fmt(same.tim1_edge_tau_max)} MPa. Surrogate θJC differs by ${err.toFixed(2)} %.`;
+  } else {
+    n.textContent = "Surrogate prediction. No Ansys run has exactly this design.";
+  }
+  ex.appendChild(n);
+  if (ctl("t1").value === CUSTOM) {
+    // Far from every tested TIM-1 product in (log k, log E): the GP is extrapolating
+    const dist = Math.min(...D.tim1.flatMap((q) => q.E.map((e) => Math.hypot(Math.log10(x.k1 / q.k), Math.log10(x.E1 / e) / 2))));
+    if (dist > 0.25) {
+      const w = document.createElement("div"); w.className = "warn";
+      w.textContent = "No tested product is near this k and E. The surrogate is extrapolating, so treat the numbers as a direction, not a result.";
+      ex.appendChild(w);
+    }
+  }
+  if (ctl("t1").value.startsWith("Indium")) {
+    const w = document.createElement("div"); w.className = "warn";
+    w.textContent = "Indium is modelled as linear elastic. Real indium yields at a few MPa and creeps, so its edge stress is an upper bound.";
+    ex.appendChild(w);
+  }
+  drawTradeMarker(p);
+}
+
+function loadRun(r) {
+  const t1 = D.tim1.find((p) => p.name === r.tim1);
+  ctl("t1").value = t1 ? t1.name : CUSTOM;
+  ctl("t2").value = r.tim2;
+  setSlider("k1", r.k1); setSlider("E1", r.E1); setSlider("a1", r.a1);
+  ctl("blt1").value = r.blt1; ctl("blt2").value = r.blt2; setSlider("E2", r.E2);
+  update();
+  $("explore").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+/* ---------- trade-off scatter ---------- */
+let tradeScale = null;
+function drawTrade() {
+  const svg = $("trade"); svg.replaceChildren();
+  // Drawn at the container's own width, so text stays 11 px on a phone
+  const W = Math.max(300, svg.parentElement.clientWidth - 36), H = W < 600 ? 340 : 420;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const box = { l: 70, r: W - 14, t: 14, b: H - 60 };
+  const runs = D.runs.filter((r) => r.stress_obj > 0);
+  const xv = runs.map((r) => r.theta_jc), yv = runs.map((r) => r.stress_obj);
+  const x0 = Math.min(...xv), x1 = Math.max(...xv), pad = (x1 - x0) * 0.04;
+  const xs = scale(x0 - pad, x1 + pad, box.l, box.r, false);
+  const ylo = Math.pow(10, Math.floor(Math.log10(Math.min(...yv)))), yhi = Math.pow(10, Math.ceil(Math.log10(Math.max(...yv))));
+  const ys = scale(ylo, yhi, box.b, box.t, true);
+  tradeScale = { xs, ys, box, svg };
+  axes(svg, box, xs, ys, linTicks(x0 - pad, x1 + pad, W < 600 ? 4 : 8), logTicks(ylo, yhi), W < 600 ? "θJC (°C/W), lower is better" : "θJC, junction to case (°C/W), lower is better", "Worse TIM edge shear (MPa, log)");
+
+  const pts = [];
+  // Non-Pareto first so the Pareto set sits on top
+  for (const r of [...runs].sort((a, b) => a.pareto - b.pareto)) {
+    const x = xs(r.theta_jc), y = ys(r.stress_obj);
+    const kind = SHAPES[tim1Idx[r.tim1] ?? 0];
+    const attrs = r.pareto
+      ? { fill: "var(--series-1)", stroke: "var(--surface-1)", "stroke-width": 2 }
+      : { fill: "none", stroke: "var(--neutral-mark)", "stroke-width": 1.5 };
+    shape(svg, kind, x, y, 5, attrs);
+    pts.push({ x, y, r });
+  }
+  el("g", { id: "tradeMarker" }, svg);
+  const hl = el("g", { id: "tradeHl" }, svg);
+  nearestHover(svg, pts, (q, e) => {
+    hl.replaceChildren();
+    if (!q) { hideTip(); return; }
+    shape(hl, SHAPES[tim1Idx[q.r.tim1] ?? 0], q.x, q.y, 8, { fill: "none", stroke: "var(--text-primary)", "stroke-width": 1.5 });
+    const r = q.r;
+    showTip(e, [[`θJC ${fmt(r.theta_jc, "theta_jc")} °C/W · ${fmt(r.stress_obj)} MPa`, ""],
+      ["", `${r.run_id} (${r.role})${r.pareto ? " · Pareto" : ""}`],
+      ["", `${r.tim1}, E ${fmtE(r.E1)}, ${r.blt1} µm`], ["", `${r.tim2}, ${r.blt2} µm`],
+      ["", `Tj ${fmt(r.Tj, "Tj")} °C · warpage ${fmt(r.warpage, "warpage")} µm`]]);
+    $("tradeDetail").textContent = `${r.run_id}: ${r.tim1} (E ${fmtE(r.E1)}, BLT ${r.blt1} µm) with ${r.tim2} (BLT ${r.blt2} µm). Click to load it.`;
+  }, (q) => loadRun(q.r));
+
+  const lg = $("tradeLegend"); lg.replaceChildren();
+  legendItem(lg, legendShape("circle", { fill: "var(--series-1)" }), "Pareto set");
+  legendItem(lg, legendShape("circle", { fill: "none", stroke: "var(--neutral-mark)", "stroke-width": 1.5 }), "Other runs");
+  D.tim1.forEach((p, i) => legendItem(lg, legendShape(SHAPES[i], { fill: "none", stroke: "var(--text-secondary)", "stroke-width": 1.5 }), p.name));
+  const cross = document.createElementNS(NS, "svg"); cross.setAttribute("width", 14); cross.setAttribute("height", 14);
+  el("path", { d: "M2 7H12M7 2V12", stroke: "var(--series-2)", "stroke-width": 2 }, cross);
+  legendItem(lg, cross, "Explorer design");
+}
+function drawTradeMarker(p) {
+  if (!tradeScale) return;
+  const g = $("tradeMarker"); if (!g) return;
+  g.replaceChildren();
+  const { xs, ys, box } = tradeScale;
+  const x = Math.min(box.r, Math.max(box.l, xs(p.theta_jc))), y = Math.min(box.b, Math.max(box.t, ys(Math.max(p.stress_obj, 1e-9))));
+  el("path", { d: `M${x - 9} ${y}H${x + 9}M${x} ${y - 9}V${y + 9}`, stroke: "var(--series-2)", "stroke-width": 2.5, "stroke-linecap": "round" }, g);
+}
+
+/* ---------- product map (Ashby style) ---------- */
+function drawAshby() {
+  const svg = $("ashby"); svg.replaceChildren();
+  const W = Math.max(300, svg.parentElement.clientWidth - 36), H = Math.round(Math.min(420, W * 0.75 + 60));
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const box = { l: 64, r: W - 12, t: 12, b: H - 60 };
+  const xs = scale(0.005, 50000, box.l, box.r, true), ys = scale(1, 100, box.b, box.t, true);
+  // best region: k above 20 W/mK, E below 1 MPa
+  el("rect", { x: box.l, y: ys(100), width: xs(1) - box.l, height: ys(20) - ys(100), fill: "var(--region)" }, svg);
+  axes(svg, box, xs, ys, logTicks(0.01, 50000).filter((v, i) => W >= 440 || i % 2 === 0), [1, 10, 100], "Young's modulus E (MPa, log)", "Conductivity k (W/mK, log)");
+  txt(svg, box.l + 8, ys(100) + 16, "Best region: high k, low E");
+
+  const pts = [], labels = [], marks = [];
+  for (const f of D.front) { const x = xs(f.E1), y = ys(f.k1); el("circle", { cx: x, cy: y, r: 2.5, fill: "var(--neutral-mark)", opacity: 0.6 }, svg); }
+  const draw = (list, color, which) => list.forEach((p, i) => {
+    const y = ys(p.k), xa = xs(p.E[0]), xb = xs(p.E[p.E.length - 1]);
+    if (xb - xa > 1) el("line", { x1: xa, x2: xb, y1: y, y2: y, stroke: color, "stroke-width": 2, "stroke-linecap": "round" }, svg);
+    for (const e of p.E) {
+      const kind = which === 1 ? SHAPES[i] : "circle";
+      shape(svg, kind, xs(e), y, 5, { fill: color, stroke: "var(--surface-1)", "stroke-width": 2 });
+      pts.push({ x: xs(e), y, p, e, which });
+    }
+    marks.push({ x: xa - 7, w: xb - xa + 14, y: y + 4 });
+    const w = p.name.length * 6;
+    const right = xb + 9 + w > box.r;
+    labels.push({ s: p.name, x: right ? xb - 9 - w : xb + 9, y: right ? y - 12 : y + 4, w });
+  });
+  draw(D.tim2, "var(--series-2)", 2);
+  draw(D.tim1, "var(--series-1)", 1);
+  // Push labels up until they clear the other labels and every product's marks
+  labels.sort((a, b) => b.y - a.y);
+  const placed = [...marks];
+  for (const L of labels) {
+    while (placed.some((P) => L.x < P.x + P.w && P.x < L.x + L.w && Math.abs(L.y - P.y) < 13)) L.y -= 4;
+    placed.push(L);
+    txt(svg, L.x, L.y, L.s);
+  }
+  nearestHover(svg, pts, (q, e) => {
+    if (!q) { hideTip(); return; }
+    showTip(e, [[`${q.p.name}`, ""], ["", `TIM-${q.which} · k ${q.p.k} W/mK · E ${fmtE(q.e)}`],
+      ["", q.p.full], ["", `Source: ${q.p.basis.replaceAll("_", " ").replaceAll(";", ", ")}`]]);
+  });
+  const lg = $("mapLegend"); lg.replaceChildren();
+  legendItem(lg, legendShape("circle", { fill: "var(--series-1)" }), "TIM-1 products");
+  legendItem(lg, legendShape("circle", { fill: "var(--series-2)" }), "TIM-2 products");
+  legendItem(lg, legendShape("circle", { fill: "var(--neutral-mark)" }), "Surrogate optimum (TIM-1)");
+}
+
+/* ---------- sensitivity small multiples ---------- */
+function drawSens() {
+  const wrap = $("sens"); wrap.replaceChildren();
+  const S = D.sensitivity;
+  for (const c of ["theta_jc", ...D.stress_cols, "warpage"]) {
+    if (!S[c]) continue;
+    const div = document.createElement("div");
+    const h = document.createElement("h3"); h.textContent = LABEL[c][0]; div.appendChild(h);
+    const rows = S.inputs.map((n, i) => [n, Math.min(1, Math.max(0, S[c][i]))]).sort((a, b) => b[1] - a[1]);
+    const W = 260, rh = 20, H = rows.length * rh + 4;
+    const svg = el("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", role: "img", "aria-label": `Sensitivity of ${LABEL[c][0]}` });
+    const x0 = 78, x1 = W - 34;
+    rows.forEach(([n, v], i) => {
+      const y = i * rh + 3;
+      txt(svg, x0 - 6, y + 12, INPUT_LABEL[n], { "text-anchor": "end" });
+      el("rect", { x: x0, y: y + 2, width: x1 - x0, height: rh - 6, fill: "var(--grid)", rx: 2, opacity: 0.5 }, svg);
+      const w = Math.max(v * (x1 - x0), v > 0 ? 2 : 0);
+      const bar = el("rect", { x: x0, y: y + 2, width: w, height: rh - 6, fill: "var(--series-1)", rx: 3 }, svg);
+      if (v >= 0.05) txt(svg, x0 + w + 4, y + 12, v.toFixed(2), {});
+      const hit = el("rect", { x: 0, y, width: W, height: rh, fill: "transparent", tabindex: 0 }, svg);
+      const show = (e) => showTip(e, [[v.toFixed(3), ""], ["", `${INPUT_LABEL[n]} → ${LABEL[c][0]}`]]);
+      hit.addEventListener("pointermove", show);
+      hit.addEventListener("pointerleave", hideTip);
+      hit.addEventListener("focus", () => { const b = hit.getBoundingClientRect(); show({ clientX: b.right, clientY: b.top }); });
+      hit.addEventListener("blur", hideTip);
+    });
+    div.appendChild(svg);
+    wrap.appendChild(div);
+  }
+}
+
+/* ---------- accuracy ---------- */
+function drawAccuracy() {
+  const ho = D.runs.filter((r) => r.role === "holdout");
+  const pred = Object.fromEntries(D.holdout_pred.map((p) => [p.run_id, p]));
+  const th = D.scores.find((s) => s.output === "theta_jc");
+  const s1 = D.scores.find((s) => s.output === D.stress_cols[0]);
+  $("accLede").textContent = `The surrogate never saw these ${ho.length} hold-out runs. On them, θJC is off by ${th.mape_pct.toFixed(2)} % on average` +
+    (s1 ? ` and TIM-1 edge shear by ${s1.mape_pct.toFixed(1)} %.` : ".") +
+    " Hold-out runs use the same 16 product pairs as training, at other bond lines and moduli, so this measures interpolation between tested designs, not new materials.";
+  const wrap = $("parity"); wrap.replaceChildren();
+  for (const c of ["theta_jc", "Tj", ...D.stress_cols]) {
+    const pairs = ho.map((r) => [r[c], pred[r.run_id]?.[c], r]).filter((p) => p[1] != null);
+    if (!pairs.length) continue;
+    const log = LOGTRACK.has(c);
+    const all = pairs.flatMap((p) => [p[0], p[1]]);
+    let lo = Math.min(...all), hi = Math.max(...all);
+    if (log) { lo = Math.pow(10, Math.floor(Math.log10(lo))); hi = Math.pow(10, Math.ceil(Math.log10(hi))); }
+    else { const pd = (hi - lo) * 0.08 || Math.abs(hi) * 0.02; lo -= pd; hi += pd; }
+    const div = document.createElement("div");
+    const h = document.createElement("h3"); h.textContent = `${LABEL[c][0]} (${LABEL[c][1]})`; div.appendChild(h);
+    const svg = el("svg", { viewBox: "0 0 280 250", class: "chart", role: "img", "aria-label": `Surrogate against Ansys for ${LABEL[c][0]}` });
+    const box = { l: 62, r: 270, t: 8, b: 200 };
+    const xs = scale(lo, hi, box.l, box.r, log), ys = scale(lo, hi, box.b, box.t, log);
+    const ticks = log ? logTicks(lo, hi) : linTicks(lo, hi, 4);
+    axes(svg, box, xs, ys, ticks, ticks, "Ansys", "Surrogate");
+    el("line", { x1: xs(lo), y1: ys(lo), x2: xs(hi), y2: ys(hi), stroke: "var(--text-muted)", "stroke-dasharray": "4 4", "stroke-width": 1 }, svg);
+    const pts = pairs.map(([y, p, r]) => {
+      const q = { x: xs(y), y: ys(p), y0: y, p, r };
+      el("circle", { cx: q.x, cy: q.y, r: 4.5, fill: "var(--series-1)", stroke: "var(--surface-1)", "stroke-width": 2 }, svg);
+      return q;
+    });
+    nearestHover(svg, pts, (q, e) => {
+      if (!q) { hideTip(); return; }
+      const err = 100 * (q.p - q.y0) / q.y0;
+      showTip(e, [[`${err >= 0 ? "+" : ""}${err.toFixed(2)} %`, ""], ["", `${q.r.run_id}`],
+        ["", `Ansys ${fmt(q.y0, c)} · surrogate ${fmt(q.p, c)} ${LABEL[c][1]}`]]);
+    });
+    div.appendChild(svg); wrap.appendChild(div);
+  }
+  const t = $("scoreTable"); t.replaceChildren();
+  const hr = t.insertRow();
+  for (const h of ["Output", "R²", "RMSE", "Mean error %"]) { const c = document.createElement("th"); c.textContent = h; hr.appendChild(c); }
+  for (const s of D.scores) {
+    const row = t.insertRow();
+    const name = LABEL[s.output] ? `${LABEL[s.output][0]} (${LABEL[s.output][1]})` : s.output;
+    [name, s.r2.toFixed(4), fmt(s.rmse), s.mape_pct.toFixed(2)].forEach((v) => { row.insertCell().textContent = v; });
+  }
+}
+
+/* ---------- run table ---------- */
+const COLS = [["run_id", "Run", "l"], ["role", "Role", "l"], ["tim1", "TIM-1", "l"], ["E1", "E1"], ["blt1", "BLT1 µm"],
+  ["tim2", "TIM-2", "l"], ["blt2", "BLT2 µm"], ["theta_jc", "θJC °C/W"], ["Tj", "Tj °C"],
+  ["tim1_edge_tau_max", "TIM-1 shear MPa"], ["tim2_edge_tau_max", "TIM-2 shear MPa"], ["warpage", "Warpage µm"], ["pareto", "Pareto", "l"]];
+let sortKey = "theta_jc", sortDir = 1;
+function drawTable() {
+  const t = $("runTable"); t.replaceChildren();
+  const thead = t.createTHead().insertRow();
+  for (const [k, h, a] of COLS) {
+    const c = document.createElement("th"); c.textContent = h + (k === sortKey ? (sortDir > 0 ? " ↑" : " ↓") : "");
+    if (a) c.className = a;
+    c.onclick = () => { sortDir = sortKey === k ? -sortDir : 1; sortKey = k; drawTable(); };
+    thead.appendChild(c);
+  }
+  const tb = t.createTBody();
+  const rows = [...D.runs].sort((a, b) => (a[sortKey] > b[sortKey] ? 1 : a[sortKey] < b[sortKey] ? -1 : 0) * sortDir);
+  for (const r of rows) {
+    const tr = tb.insertRow(); tr.style.cursor = "pointer"; tr.onclick = () => loadRun(r);
+    for (const [k, , a] of COLS) {
+      const td = tr.insertCell(); if (a) td.className = a;
+      td.textContent = k === "E1" ? fmtE(r.E1) : k === "pareto" ? (r.pareto ? "yes" : "") :
+        typeof r[k] === "number" ? fmt(r[k], k) : r[k];
+    }
+  }
+}
+
+/* ---------- start on the coolest Pareto run ---------- */
+drawTrade(); drawAshby(); drawSens(); drawAccuracy(); drawTable();
+const start = D.runs.filter((r) => r.pareto).sort((a, b) => a.theta_jc - b.theta_jc)[0] || D.runs[0];
+ctl("t1").value = start.tim1; ctl("t2").value = start.tim2;
+setSlider("k1", start.k1); setSlider("E1", start.E1); setSlider("a1", start.a1);
+ctl("blt1").value = start.blt1; ctl("blt2").value = start.blt2; setSlider("E2", start.E2);
+update();
+let resizeTimer;
+addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { drawTrade(); drawAshby(); update(); }, 150);
+});
+</script>
+</body>
+</html>
