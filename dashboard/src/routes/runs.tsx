@@ -20,36 +20,60 @@ import { fmt, fmtModulus } from "@/lib/format"
 
 export const Route = createFileRoute("/runs")({ component: Runs })
 
-const num = (key: keyof Run, header: string, f: (v: number) => string): ColumnDef<Run> => ({
+// Unit on its own line keeps numeric columns narrow, so the table fits without sideways scrolling
+const head = (label: string, unit: string) => (
+  <span className="inline-grid text-right">
+    {label}
+    <span className="font-normal text-muted-foreground">{unit}</span>
+  </span>
+)
+
+const num = (key: keyof Run, header: React.ReactNode, f: (v: number) => string): ColumnDef<Run> => ({
   accessorKey: key,
-  header,
+  header: () => header,
   cell: ({ getValue }) => f(getValue() as number),
   meta: { numeric: true },
 })
 
 const columns: ColumnDef<Run>[] = [
-  { accessorKey: "run_id", header: "Run", cell: ({ getValue }) => <span className="font-mono text-xs">{getValue() as string}</span> },
-  { accessorKey: "tim1", header: "TIM-1" },
-  num("E1", "E1", fmtModulus),
-  num("blt1", "BLT1 µm", String),
-  { accessorKey: "tim2", header: "TIM-2" },
-  num("blt2", "BLT2 µm", String),
-  num("theta_jc", "θJC °C/W", (v) => fmt(v, "theta_jc")),
-  num("Tj", "Tj °C", (v) => fmt(v, "Tj")),
-  num("tim1_edge_tau_max", "TIM-1 shear MPa", (v) => fmt(v)),
-  num("tim2_edge_tau_max", "TIM-2 shear MPa", (v) => fmt(v)),
-  num("warpage", "Warpage µm", (v) => fmt(v, "warpage")),
   {
-    id: "tags",
-    header: "",
-    enableSorting: false,
+    accessorKey: "run_id",
+    header: "Run",
     cell: ({ row }) => (
-      <div className="flex justify-end gap-1">
-        {row.original.pareto && <Badge variant="secondary">Pareto</Badge>}
-        {row.original.role === "holdout" && <Badge variant="outline">Hold-out</Badge>}
+      <div className="grid gap-1">
+        <span className="font-mono text-xs">{row.original.run_id.replace("DOE-", "")}</span>
+        <div className="flex gap-1">
+          {row.original.pareto && <Badge variant="secondary">Pareto</Badge>}
+          {row.original.role === "holdout" && <Badge variant="outline">Hold-out</Badge>}
+        </div>
       </div>
     ),
   },
+  {
+    accessorKey: "tim1",
+    header: "TIM-1",
+    cell: ({ row }) => (
+      <div>
+        <div className="font-medium">{row.original.tim1}</div>
+        <div className="text-xs text-muted-foreground">{fmtModulus(row.original.E1)} · {row.original.blt1} µm</div>
+      </div>
+    ),
+  },
+  {
+    accessorKey: "tim2",
+    header: "TIM-2",
+    cell: ({ row }) => (
+      <div>
+        <div>{row.original.tim2}</div>
+        <div className="text-xs text-muted-foreground">{row.original.blt2} µm</div>
+      </div>
+    ),
+  },
+  num("theta_jc", head("θJC", "°C/W"), (v) => fmt(v, "theta_jc")),
+  num("Tj", head("Tj", "°C"), (v) => fmt(v, "Tj")),
+  num("tim1_edge_tau_max", head("TIM-1 shear", "MPa"), (v) => fmt(v)),
+  num("tim2_edge_tau_max", head("TIM-2 shear", "MPa"), (v) => fmt(v)),
+  num("warpage", head("Warpage", "µm"), (v) => fmt(v, "warpage")),
 ]
 
 function Runs() {

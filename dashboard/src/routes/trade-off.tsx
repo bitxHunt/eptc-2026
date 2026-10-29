@@ -44,7 +44,7 @@ function TradeOff() {
         </ToggleGroup>
       </PageHeader>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="grid gap-4 2xl:grid-cols-[minmax(0,1fr)_420px]">
         <Panel title={`${runs.length} runs`}>
           <TradeoffChart runs={runs} selectedId={selected?.run_id} onSelect={setSelected} className="h-[520px]" />
         </Panel>
@@ -59,7 +59,7 @@ function TradeOff() {
             )
           }
         >
-          <div className="-mx-1 max-h-[520px] overflow-auto">
+          <div className="-mx-1 max-h-[520px] overflow-y-auto">
             <Table className="tabular">
               <TableHeader className="sticky top-0 bg-card">
                 <TableRow>
