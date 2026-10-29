@@ -1,12 +1,13 @@
-"""Build dashboard/index.html from the batch results and the trained surrogate.
+"""Export the batch results and the trained surrogate for the dashboard app.
 
-Everything the page needs is embedded, so index.html opens offline and can go
-in the submission ZIP as it is. The GP mean is exported (training inputs,
-alpha, kernel settings) so the page predicts new designs in the browser.
+Writes dashboard/src/data/dashboard.json, which the React app imports at build
+time. The GP mean is exported (training inputs, alpha, kernel settings) so the
+app predicts new designs in the browser; check_export() stops the export if
+that no longer reproduces scikit-learn.
 
-Run after ml/run_all.py:
-    python dashboard/build_dashboard.py
-    python dashboard/build_dashboard.py <inputs.csv> <outputs.csv>
+Run from the repo root after ml/run_all.py:
+    python dashboard/scripts/export_data.py
+    python dashboard/scripts/export_data.py <inputs.csv> <outputs.csv>
 """
 import json
 import sys
@@ -15,17 +16,17 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "ml"))
 
-from contract import INPUTS, INPUT_COLS, stress_cols  # noqa: E402
+from contract import INPUTS, INPUT_COLS, POWER_W, T_AMB, stress_cols  # noqa: E402
 from load_runs import load  # noqa: E402
 from surrogate import Surrogate, to_unit  # noqa: E402
 
 ML_OUT = ROOT / "ml" / "out"
 INPUTS_CSV = ROOT / "data" / "inputs" / "TIM_balanced_DOE_144.csv"
 OUTPUTS_CSV = ROOT / "data" / "outputs" / "TIM_balanced_DOE_144_outputs.csv"
-HERE = Path(__file__).parent
+OUT = ROOT / "dashboard" / "src" / "data" / "dashboard.json"
 
 # Outputs shown on the page, in display order
 SHOWN = ["Tj", "theta_jc", "tim1_edge_tau_max", "tim2_edge_tau_max", "warpage", "Tcase"]
@@ -77,7 +78,7 @@ def gp_export(sur):
 
 
 def export_predict(g, U):
-    """The page's prediction (template.html, predict()) in NumPy, for one exported GP."""
+    """The app's prediction (src/lib/gp.ts) in NumPy, for one exported GP."""
     d = np.sqrt((((U[:, None, :] - np.asarray(g["X"])[None]) / np.asarray(g["ls"])) ** 2).sum(-1))
     k = g["c"] * (1 + np.sqrt(5) * d + 5 / 3 * d ** 2) * np.exp(-np.sqrt(5) * d)
     y = k @ np.asarray(g["alpha"]) * g["ys"] + g["ym"]
@@ -128,6 +129,7 @@ def main(inputs_csv=INPUTS_CSV, outputs_csv=OUTPUTS_CSV):
     run_cols = ["run_id", "pair_id", "role", "tim1", "tim2", *INPUT_COLS,
                 *[c for c in SHOWN if c in runs], "stress_obj", "pareto"]
     data = {
+        "power_w": POWER_W, "t_amb_c": T_AMB,
         "n_total": int(len(ins)), "n_solved": int(len(runs)),
         "n_train": int(len(train)), "n_holdout": int(len(holdout)),
         "inputs": {k: list(v) for k, v in INPUTS.items()}, "input_cols": INPUT_COLS,
@@ -142,11 +144,11 @@ def main(inputs_csv=INPUTS_CSV, outputs_csv=OUTPUTS_CSV):
                             .to_json(orient="records", double_precision=5)),
         "gp": gps,
     }
-    page = (HERE / "template.html").read_text(encoding="utf-8")
-    page = page.replace("/*__DATA__*/null", json.dumps(data, separators=(",", ":")))
-    (HERE / "index.html").write_text(page, encoding="utf-8")
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+    text = json.dumps(data, separators=(",", ":"))
+    OUT.write_text(text, encoding="utf-8")
     print(f"  {len(runs)} solved runs ({len(train)} train, {len(holdout)} holdout) -> "
-          f"{HERE / 'index.html'} ({len(page) / 1024:.0f} KB)")
+          f"{OUT} ({len(text) / 1024:.0f} KB)")
 
 
 if __name__ == "__main__":

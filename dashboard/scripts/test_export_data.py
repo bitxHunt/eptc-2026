@@ -1,4 +1,4 @@
-"""Tests for build_dashboard.py: python -m unittest dashboard/test_build_dashboard.py
+"""Tests for export_data.py: python -m unittest dashboard/scripts/test_export_data.py
 
 Trains a small surrogate on made-up data, so no Ansys and no ml/out/ are needed.
 """
@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import build_dashboard as bd  # noqa: E402
+import export_data as bd  # noqa: E402
 from contract import INPUT_COLS  # noqa: E402  (ml/ is on the path via build_dashboard)
 from sample import to_physical  # noqa: E402
 from surrogate import Surrogate  # noqa: E402
