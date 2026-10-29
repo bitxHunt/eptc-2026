@@ -15,7 +15,7 @@ Our entry for the EPTC 2026 thermal interface material (TIM) challenge. We look 
 | What sets stress | TIM-1 modulus: nearly all of the variation in TIM-1 edge shear |
 | Key trade-off | Soft silver paste comes within about 15 % of indium's θJC with about 4,000 times less TIM-1 edge shear |
 
-Explore the results in the dashboard, hosted on Vercel from `dashboard/` (link to be added once deployed), or run it locally with `cd dashboard && pnpm install && pnpm dev`.
+Explore the results in the live dashboard at [timexplorer.vercel.app](https://timexplorer.vercel.app) (built from `dashboard/`), or run it locally with `cd dashboard && pnpm install && pnpm dev`.
 
 ## How it works
 

@@ -14,7 +14,7 @@ React + Vite + TypeScript, shadcn/ui, TanStack Router, pnpm (user's choice). Liv
 
 - **Judges** of the EPTC 2026 TIM challenge (engineers from Ansys and Heraeus), opening the link on their own while scoring the submission. They know FEA, θJC, TIM materials, optiSLang and Granta. They have minutes, not hours.
 - **The team presenting live**: one member drives it on a projector during the 10-minute presentation.
-- **The team itself** (Finite Boys, 3 members: lead on AI and automation, one robotics, one computer engineering) to understand and check results while writing the report.
+- **The team itself** (Finite Boys, 3 members) to understand and check results while writing the report.
 
 ## Product Purpose
 
