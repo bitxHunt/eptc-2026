@@ -27,9 +27,16 @@ POWER_W = 400.0
 
 # Contract input columns, in contract units: k W/mK, E Pa, a 1/K, blt um, h W/m2K.
 INPUT_COLS = ["k1", "E1", "a1", "blt1", "k2", "E2", "a2", "blt2", "h"]
-# Contract inputs the model can't vary yet (see PARAMETERS.md). Keep in step with
+# Contract inputs the model can't vary (see PARAMETERS.md). Keep in step with
 # the None entries in INPUT_MAP in batch.wbjn.
-NOT_IN_MODEL = {"blt1": 50.0, "blt2": 150.0, "h": 10.0}
+NOT_IN_MODEL = {"h": 150.0}
+
+# BLT is not a geometry parameter. Each TIM keeps its modelled thickness and the
+# real BLT reaches the model through thin-layer equivalence:
+#   heat:   R = t / k          -> k_eff = k * t_model / t_real (exact for a thin layer)
+#   stress: shear = G * u / t  -> E_eff = E * t_model / t_real (approximate, best
+#           for soft TIMs; checked against real-geometry runs)
+MODEL_BLT_UM = {"1": 50.0, "2": 150.0}
 
 # Column names used in data/inputs/TIM_pair_simulation_runs.csv, mapped to the contract.
 ALIASES = {
@@ -39,16 +46,19 @@ ALIASES = {
 
 # Raw output columns from batch.wbjn, and the unit each is stored in here.
 RAW_OUTPUTS = {
-    "Tj": "C", "Tmin": "C", "Tcase": "C",
-    "tim1_s1_max": "MPa", "tim1_s1_min": "MPa", "tim2_s1_max": "MPa", "tim2_s1_min": "MPa",
-    "tim1_shear_max": "MPa", "tim1_shear_min": "MPa", "tim2_shear_max": "MPa", "tim2_shear_min": "MPa",
-    "warpage": "mm",
+    "Tj": "C", "Tmin": "C", "Tcase": "C", "Tcase_avg": "C", "Q_out": "W",
+    "tim1_vm_avg": "MPa", "tim1_vm_max": "MPa", "tim2_vm_avg": "MPa", "tim2_vm_max": "MPa",
+    "tim1_edge_shear_max": "MPa", "tim1_edge_shear_avg": "MPa",
+    "tim2_edge_shear_max": "MPa", "tim2_edge_shear_avg": "MPa",
+    "deform_total_max": "um", "warp_y_max": "um", "warp_y_min": "um",
 }
-TO_BASE = {"C": 1.0, "MPa": 1e6, "Pa": 1.0, "kPa": 1e3, "GPa": 1e9, "mm": 1e-3, "m": 1.0, "um": 1e-6}
+TO_BASE = {"C": 1.0, "W": 1.0, "MPa": 1e6, "Pa": 1.0, "kPa": 1e3, "GPa": 1e9,
+           "mm": 1e-3, "m": 1.0, "um": 1e-6}
 
 OUTPUT_HEADER = (["run_id", "status"]
                  + ["%s_%s" % (c, u) for c, u in RAW_OUTPUTS.items()]
-                 + ["theta_jc_C_W", "solve_time_s", "chunk", "finished_at", "error_message"])
+                 + ["warpage_um", "theta_jc_C_W", "heat_balance_rel_error",
+                    "solve_time_s", "chunk", "finished_at", "error_message"])
 
 
 def log(msg):
@@ -118,9 +128,29 @@ def convert_row(raw, chunk):
             v, row["status"] = None, "failed"
             row["error_message"] = str(e)
         row["%s_%s" % (col, unit)] = "" if v is None else "%.6g" % v
-    tj, tc = row["Tj_C"], row["Tcase_C"]
-    row["theta_jc_C_W"] = "%.6g" % ((float(tj) - float(tc)) / POWER_W) if tj and tc else ""
+    # theta_jc divides by the heat that actually leaves (P21), not the nominal 400 W.
+    # The only cooling is on the heat sink, so all of it passes the lid top.
+    tj, tc, q = row["Tj_C"], row["Tcase_C"], row["Q_out_W"]
+    q = abs(float(q)) if q else POWER_W
+    row["theta_jc_C_W"] = "%.6g" % ((float(tj) - float(tc)) / q) if tj and tc else ""
+    row["heat_balance_rel_error"] = "%.3g" % (abs(q - POWER_W) / POWER_W) if row["Q_out_W"] else ""
+    wmax, wmin = row["warp_y_max_um"], row["warp_y_min_um"]
+    row["warpage_um"] = "%.6g" % (float(wmax) - float(wmin)) if wmax and wmin else ""
     return row
+
+
+def thin_layer(row):
+    """Contract row with real BLT -> the k and E to set on the fixed-thickness model layers."""
+    out = dict(row)
+    for n, t_model in MODEL_BLT_UM.items():
+        t_real = row.get("blt" + n)
+        if t_real is None:
+            continue
+        ratio = t_model / t_real
+        for col in ("k" + n, "E" + n):
+            if col in out:
+                out[col] = row[col] * ratio
+    return out
 
 
 def append_outputs(out_path, rows):
@@ -152,6 +182,7 @@ def run_chunk(n, rows, args, work):
     with open(inputs, "w", encoding="utf-8") as f:
         f.write("\t".join(cols) + "\n")
         for r in rows:
+            r = thin_layer(r)
             f.write("\t".join(str(r.get(c, "")) for c in cols) + "\n")
     if raw_out.exists():
         raw_out.unlink()
@@ -192,6 +223,8 @@ def main(argv=None):
     p.add_argument("--no-retry-failed", action="store_true", help="skip failed run_ids instead of retrying them")
     p.add_argument("--dry-run", action="store_true", help="print the plan, run nothing")
     args = p.parse_args(argv)
+    # Workbench runs inside the chunk folder, so every path in job.txt must be absolute.
+    args.work, args.archive = args.work.resolve(), args.archive.resolve()
 
     out = args.out or REPO / "data" / "outputs" / (args.inputs.stem + "_outputs.csv")
     rows = read_inputs(args.inputs)

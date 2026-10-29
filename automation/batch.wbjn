@@ -35,10 +35,11 @@ INPUT_MAP = {
     "E2": ("P5", 1.0, "Pa"),
     "a2": ("P7", 1.0, "C^-1"),
     "k2": ("P8", 1.0, "W m^-1 C^-1"),
-    # Not parameters in the model yet. Fill in the P number once added in Workbench.
-    "blt1": (None, 1e-3, "mm"),   # DS_BLT1 from SolidWorks. VERIFY the unit Workbench shows for it
-    "blt2": (None, 1e-3, "mm"),   # DS_BLT2
-    "h": (None, 1.0, "W m^-2 C^-1"),  # heat sink film coefficient
+    # Not parameters in the model. BLT reaches the model through k and E (thin-layer
+    # equivalence in run_batch.py); the film coefficient is fixed at 150 W/m2K.
+    "blt1": (None, 1e-3, "mm"),
+    "blt2": (None, 1e-3, "mm"),
+    "h": (None, 1.0, "W m^-2 C^-1"),
 }
 
 # Poisson's ratio is fixed at 0.45. P2 and P6 are pinned to that value every
@@ -47,20 +48,25 @@ FIXED = {"P2": "0.45", "P6": "0.45"}
 
 # Contract output column -> Workbench parameter. Values are written raw
 # ("629.25 [C]"); run_batch.py converts the units.
-# VERIFY: which body "scope 1" and "scope 2" are. Assumed TIM-1 and TIM-2.
+# P numbers from the V2 Parameter Set (29 Oct). P11-P18 (old "scope" stresses,
+# bodies never checked) are left out on purpose.
 OUTPUT_MAP = [
-    ("Tj", "P10"),                 # Temperature scope Maximum. Must be scoped to the die only
+    ("Tj", "P10"),                 # Temperature scope Maximum, scoped to Silicon Die
     ("Tmin", "P9"),                # Temperature scope Minimum
-    ("Tcase", None),               # lid-top maximum, not in the model yet
-    ("tim1_s1_max", "P12"),        # Maximum Principal Stress scope 1 Maximum
-    ("tim1_s1_min", "P11"),
-    ("tim2_s1_max", "P14"),        # Maximum Principal Stress scope 2 Maximum
-    ("tim2_s1_min", "P13"),
-    ("tim1_shear_max", "P16"),     # Shear Stress scope 1 Maximum
-    ("tim1_shear_min", "P15"),
-    ("tim2_shear_max", "P18"),     # Shear Stress scope 2 Maximum
-    ("tim2_shear_min", "P17"),
-    ("warpage", None),             # total deformation of the package, not in the model yet
+    ("Tcase", "P19"),              # Tcase lid top Maximum (lid top face, above the die)
+    ("Tcase_avg", "P20"),          # Tcase lid top Average
+    ("Q_out", "P21"),              # Heat out convection Heat (negative = leaving)
+    ("tim1_vm_avg", "P22"),        # Avg stress TIM1 Average (von Mises, TIM-1 body)
+    ("tim1_vm_max", "P23"),
+    ("tim2_vm_avg", "P25"),        # Avg stress TIM2 Average
+    ("tim2_vm_max", "P24"),
+    ("tim1_edge_shear_max", "P29"),  # Max shear on Edge Path TIM1 (0.5-1.5 mm in, mid-plane)
+    ("tim1_edge_shear_avg", "P30"),
+    ("tim2_edge_shear_max", "P31"),  # Max shear on Edge Path TIM2
+    ("tim2_edge_shear_avg", "P32"),
+    ("deform_total_max", "P26"),   # Total Deformation Maximum, all bodies
+    ("warp_y_max", "P27"),         # Warpage Y Maximum, substrate only
+    ("warp_y_min", "P28"),
 ]
 
 
