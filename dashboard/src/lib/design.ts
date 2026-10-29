@@ -54,15 +54,19 @@ export function matchingRun(d: Design): Run | undefined {
   )
 }
 
-/** The solved run closest to a design, on the same log / linear scales the surrogate uses. */
-export function nearestRun(d: Design): Run {
+/**
+ * The solved run closest to a design, on the same log / linear scales the surrogate uses.
+ * Only runs with the same TIM-1 and TIM-2 products count, so the comparison is like for like.
+ */
+export function nearestRun(d: Design, s: DesignState): Run {
   const unit = (c: (typeof data.input_cols)[number], v: number) => {
     const [lo, hi, scale] = data.inputs[c]
     if (scale === "fixed") return 0
     return scale === "log" ? (Math.log10(v) - Math.log10(lo)) / (Math.log10(hi) - Math.log10(lo)) : (v - lo) / (hi - lo)
   }
-  const dist = (r: Run) => data.input_cols.reduce((s, c) => s + (unit(c, r[c]) - unit(c, d[c])) ** 2, 0)
-  return data.runs.reduce((a, b) => (dist(b) < dist(a) ? b : a))
+  const dist = (r: Run) => data.input_cols.reduce((acc, c) => acc + (unit(c, r[c]) - unit(c, d[c])) ** 2, 0)
+  const samePair = data.runs.filter((r) => (s.tim1 === CUSTOM || r.tim1 === s.tim1) && r.tim2 === s.tim2)
+  return (samePair.length ? samePair : data.runs).reduce((a, b) => (dist(b) < dist(a) ? b : a))
 }
 
 /** Values Ansys actually ran for a slider, given the chosen products: the slider snaps to these. */

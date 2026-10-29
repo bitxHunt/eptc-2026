@@ -51,7 +51,7 @@ function Explorer() {
   const design = useMemo(() => toDesign(s), [s])
   const p = useMemo(() => predict(design), [design])
   const match = matchingRun(design)
-  const near = useMemo(() => (match ? undefined : nearestRun(design)), [match, design])
+  const near = useMemo(() => (match ? undefined : nearestRun(design, s)), [match, design, s])
   const extrapolating = s.tim1 === CUSTOM && distanceToProducts(design) > 0.25
   const set = (patch: Partial<DesignState>) => setS((prev) => ({ ...prev, ...patch }))
 
@@ -134,7 +134,10 @@ function Explorer() {
                     >
                       {near!.run_id}
                     </button>
-                    <span className="tabular">: θJC {fmt(near!.theta_jc, "theta_jc")}, Tj {fmt(near!.Tj, "Tj")} °C</span>
+                    <span className="tabular">
+                      {" "}(E {fmtModulus(near!.E1)}, {near!.blt1}/{near!.blt2} µm): θJC {fmt(near!.theta_jc, "theta_jc")}, edge shear{" "}
+                      {fmt(near!.tim1_edge_tau_max)} MPa
+                    </span>
                   </>
                 )}
               </span>
