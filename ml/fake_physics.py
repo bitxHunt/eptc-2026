@@ -15,7 +15,7 @@ import sys
 import numpy as np
 import pandas as pd
 
-from contract import H_SINK, INPUT_COLS, NU_TIM, OUTPUT_COLS, POWER_W, T_AMB
+from contract import DEMO_OUTPUT_COLS as OUTPUT_COLS, H_SINK, INPUT_COLS, NU_TIM, POWER_W, T_AMB
 
 # Geometry (m) and materials, from the teammate's Workbench model
 A_DIE = 0.020 ** 2            # die and TIM-1 footprint

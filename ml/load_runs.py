@@ -26,12 +26,15 @@ INPUT_MAP = {
 }
 # runner output column -> (contract column, factor to contract units)
 OUTPUT_MAP = {
-    "Tj_C": ("Tj", 1.0), "Tcase_C": ("Tcase", 1.0), "theta_jc_C_W": ("theta_jc", 1.0),
-    "tim1_s1_max_MPa": ("tim1_s1_max", 1.0), "tim1_s1_avg_MPa": ("tim1_s1_avg", 1.0),
-    "tim2_s1_max_MPa": ("tim2_s1_max", 1.0), "tim2_s1_avg_MPa": ("tim2_s1_avg", 1.0),
-    "tim1_shear_max_MPa": ("tim1_tau_max", 1.0), "tim1_shear_avg_MPa": ("tim1_tau_avg", 1.0),
-    "tim2_shear_max_MPa": ("tim2_tau_max", 1.0), "tim2_shear_avg_MPa": ("tim2_tau_avg", 1.0),
-    "warpage_mm": ("warpage", 1e3),
+    "Tj_C": ("Tj", 1.0), "Tcase_C": ("Tcase", 1.0), "Tcase_avg_C": ("Tcase_avg", 1.0),
+    "theta_jc_C_W": ("theta_jc", 1.0),
+    "tim1_vm_avg_MPa": ("tim1_vm_avg", 1.0), "tim1_vm_max_MPa": ("tim1_vm_max", 1.0),
+    "tim2_vm_avg_MPa": ("tim2_vm_avg", 1.0), "tim2_vm_max_MPa": ("tim2_vm_max", 1.0),
+    "tim1_edge_shear_max_MPa": ("tim1_edge_tau_max", 1.0),
+    "tim1_edge_shear_avg_MPa": ("tim1_edge_tau_avg", 1.0),
+    "tim2_edge_shear_max_MPa": ("tim2_edge_tau_max", 1.0),
+    "tim2_edge_shear_avg_MPa": ("tim2_edge_tau_avg", 1.0),
+    "warpage_um": ("warpage", 1.0),
 }
 HOLDOUT_FRACTION, SEED = 0.15, 2026
 
@@ -54,7 +57,10 @@ def load(inputs_csv, outputs_csv):
     missing = [c for c in INPUT_COLS if c not in x]
     if missing:
         raise ValueError(f"inputs CSV has no column for {missing}")
-    if "pair_id" in ins:
+    if "dataset_role" in ins:
+        # TIM_balanced_DOE_144.csv: one holdout row per TIM pair
+        x["holdout"] = ins["dataset_role"].astype(str).str.lower().eq("holdout")
+    elif "pair_id" in ins:
         x["holdout"] = ins["pair_id"].astype(str).str.contains("HOLDOUT")
     else:
         x["holdout"] = np.random.default_rng(SEED).random(len(ins)) < HOLDOUT_FRACTION
