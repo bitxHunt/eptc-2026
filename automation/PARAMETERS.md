@@ -35,10 +35,12 @@ BLT and the heat sink film coefficient are not parameters. BLT reaches the model
 | P26 | Total deformation, Maximum | All bodies | `deform_total_max` |
 | P27 | Directional deformation Y, Maximum | Substrate | `warp_y_max` |
 | P28 | Directional deformation Y, Minimum | Substrate | `warp_y_min` |
-| P29 | Maximum shear stress on path, Maximum | TIM-1 edge path | `tim1_edge_shear_max` |
-| P30 | Maximum shear stress on path, Average | TIM-1 edge path | `tim1_edge_shear_avg` |
-| P31 | Maximum shear stress on path, Maximum | TIM-2 edge path | `tim2_edge_shear_max` |
-| P32 | Maximum shear stress on path, Average | TIM-2 edge path | `tim2_edge_shear_avg` |
+| P29 | Maximum shear stress on path, Maximum (shown as "Edge shear TIM1") | TIM-1 edge path | `tim1_edge_shear_max` |
+| P30 | Maximum shear stress on path, Average (shown as "Edge shear TIM1") | TIM-1 edge path | `tim1_edge_shear_avg` |
+| P31 | Maximum shear stress on path, Maximum (shown as "Maximum Shear Stress") | TIM-2 edge path | `tim2_edge_shear_max` |
+| P32 | Maximum shear stress on path, Average (shown as "Maximum Shear Stress") | TIM-2 edge path | `tim2_edge_shear_avg` |
+
+Workbench shows input names without the material (P1 and P5 both read "Young's Modulus"). P1 to P4 belong to TIM 1 and P5 to P8 to TIM 2.
 
 P11 to P18 are left over from V1 (principal and shear stress on bodies that were never checked) and are not read.
 
@@ -47,3 +49,11 @@ P11 to P18 are left over from V1 (principal and shear stress on bodies that were
 ## V2 baseline (TIM-1 and TIM-2 at k 5 W/mK, E 10 MPa, BLT 50 / 150 µm)
 
 Tj 131.0 °C, Tcase 117.9 °C, heat out 400 W, θJC 0.033 °C/W, warpage 26 µm, TIM-1 edge shear 0.69 MPa, TIM-2 edge shear 0.19 MPa.
+
+## Mesh
+
+Sweep Method on the TIM-1 and TIM-2 bodies, 4 element layers through the thickness. Body Sizing 1 mm on 3 thin bodies (the two TIMs and the die). About 174,500 nodes and 78,600 elements.
+
+Mesh check (30 Oct 2026, DOE-P14-03): Body Sizing halved to 0.5 mm (650,844 nodes). θJC changed by −0.5 % (0.01179 to 0.01173 °C/W) and TIM-1 edge shear by −0.2 % (12,500 to 12,473 Pa). Tj moved 0.04 °C. The 1 mm mesh is fine. The 0.5 mm structural solve needs about 43 GB of RAM in-core, so on a 16 GB laptop it runs out-of-core and takes about 20 min instead of 2.
+
+After changing any mesh setting, right-click Mesh > Clear Generated Data before Generate Mesh. Otherwise Mechanical keeps part of the old mesh and the TIM sweep fails.
