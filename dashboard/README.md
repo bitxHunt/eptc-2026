@@ -29,7 +29,7 @@ URLs use a hash (`#/trade-off`), so the build works on any static host without r
 
 ## Deploy (Vercel)
 
-Import the GitHub repo on vercel.com and set **Root Directory** to `dashboard`. `vercel.json` sets the rest (pnpm install, `pnpm build`, output `dist`). Every push to `main` redeploys; pull requests get preview links.
+Import the GitHub repo (`bitxHunt/eptc-2026`) on vercel.com and set **Root Directory** to `dashboard`. `vercel.json` sets the rest (pnpm install, `pnpm build`, output `dist`). Every push to `main` redeploys; pull requests get preview links.
 
 ## Data
 
