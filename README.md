@@ -43,7 +43,7 @@ model/eptc.wbpz       automation/          data/outputs/*.csv      ml/          
 | `data/outputs/` | Results written by the runner. `TIM_balanced_DOE_144_outputs.csv` holds the 144 runs |
 | `ml/` | Surrogate, optimisation, sensitivity. See [`ml/README.md`](ml/README.md) |
 | `dashboard/` | The web dashboard and its data export script. See [`dashboard/README.md`](dashboard/README.md) |
-| `report/` | Report outline (official 8 sections) and drafts |
+| `report/` | Empty for now |
 | `docs/`, `materials/` | Empty for now |
 
 ## Getting started
