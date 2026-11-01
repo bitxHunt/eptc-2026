@@ -3,6 +3,7 @@ import {
   ActivityIcon,
   BookOpenIcon,
   FlaskConicalIcon,
+  FolderGit2Icon,
   GaugeIcon,
   LayersIcon,
   ScatterChartIcon,
@@ -89,11 +90,20 @@ export function AppSidebar() {
           </SidebarGroup>
         ))}
       </SidebarContent>
-      <SidebarFooter className="px-3 pb-3 group-data-[collapsible=icon]:hidden">
+      <SidebarFooter className="gap-1.5 px-3 pb-3 group-data-[collapsible=icon]:hidden">
         <div className="tabular flex items-center gap-2 text-xs text-muted-foreground">
           <span className="size-1.5 rounded-full bg-series-3" aria-hidden />
           {data.n_solved}/{data.n_total} Ansys runs solved
         </div>
+        <a
+          href="https://github.com/bitxHunt/eptc-2026"
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-2 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+        >
+          <FolderGit2Icon className="size-3.5" aria-hidden />
+          Source on GitHub
+        </a>
       </SidebarFooter>
     </Sidebar>
   )
